@@ -69,3 +69,22 @@ Your solution could support mission planners in coordinating between science and
 It could help teams respond quickly when schedule changes or hardware development challenges require landing date or location adjustments.
 It could also serve as an educational tool to help students and the public understand lunar exploration challenges and why mission planning is so complex.
 For data and resources related to this challenge, refer to the Resources tab at the top of the page. More resources may be added before the hackathon begins.
+
+## Resources
+
+### NASA Data & Resources
+
+#### Quickmap:
+An interactive mapping tool developed by Arizona State University that provides access to high-resolution lunar imagery, topographic data, and other datasets from NASA's Lunar Reconnaissance Orbiter. You can use Quickmap to explore landing sites, visualize terrain, and understand the lunar surface in detail - particularly useful for understanding the complex topography of south pole regions.
+
+#### Moon Trek:
+NASA's interactive 3D visualization tool for lunar exploration. Moon Trek allows you to explore the lunar surface, view topographic data, and understand the terrain at potential landing sites. It provides an intuitive interface for spatial understanding of lunar locations and can help you visualize how terrain affects horizon positions.
+
+#### Horizons System:
+A powerful ephemeris computation tool developed by NASA's Jet Propulsion Laboratory that calculates the positions and velocities of celestial bodies, including the Sun and Earth as seen from any location on the Moon. You can use Horizons to obtain the precise angular positions of the Sun and Earth at specific times and locations, which form the foundation for your visualizations and power/communication assessments.
+
+### Space Agency Partner Resources
+### CSA (Canadian Space Agency)
+
+#### Moon Exploration:
+Explore the CSA’s Moon Exploration portal to learn about past, current, and future missions to the Moon. Discover Canada's contributions to lunar exploration, including technologies, scientific research, and participation in the Artemis program.
