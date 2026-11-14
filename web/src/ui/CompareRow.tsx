@@ -5,7 +5,8 @@ type CompareRowProps = {
 export function CompareRow({ sentence }: CompareRowProps) {
   return (
     <div className="compare">
-      <span>Compare with Nobile Rim 1. {sentence}</span>
+      <span className="compare-label">Compare</span>
+      <p>{sentence}</p>
     </div>
   );
 }
