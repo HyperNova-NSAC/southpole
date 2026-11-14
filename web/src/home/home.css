@@ -1,0 +1,318 @@
+/* ==========================================================================
+   Lunar Skyline landing page. Always dark: it is a view into space.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+  --text: #f5f5f7;
+  --text-2: rgba(235, 235, 245, 0.68);
+  --text-3: rgba(235, 235, 245, 0.4);
+  --line: rgba(255, 255, 255, 0.1);
+  --sun: #ffb340;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter, system-ui,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: #000;
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---------- Navigation ---------- */
+
+.home-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px clamp(20px, 4vw, 48px);
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+}
+
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.home-brand img {
+  border-radius: 7px;
+}
+
+.home-nav-link {
+  font-size: 14px;
+  color: var(--text-2);
+  transition: color 0.2s ease;
+}
+
+.home-nav-link:hover {
+  color: var(--text);
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* The WebGL Moon fills the hero and fades in once its textures load. */
+.hero-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-stage .moon-canvas {
+  position: absolute !important;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+  cursor: grab;
+}
+
+.hero-stage .moon-canvas:active {
+  cursor: grabbing;
+}
+
+.hero-stage.ready .moon-canvas {
+  opacity: 1;
+}
+
+/* Placeholder while the Moon loads: a faint sunlit limb where the sphere will be. */
+.hero-glow {
+  position: absolute;
+  top: 50%;
+  right: 8%;
+  width: min(62vh, 52vw);
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 72% 40%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 55%, transparent 70%);
+  transition: opacity 1.2s ease;
+}
+
+.hero-stage.ready .hero-glow {
+  opacity: 0;
+}
+
+/* Keeps the headline legible over the Moon without hiding it. */
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.55) 32%, transparent 60%),
+    linear-gradient(transparent 70%, #000 100%);
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+  padding: 120px clamp(20px, 6vw, 96px) 96px;
+  pointer-events: none;
+}
+
+.hero-copy a {
+  pointer-events: auto;
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sun);
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(52px, 8vw, 104px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  background: linear-gradient(180deg, #ffffff 30%, #a1a1a6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lede {
+  margin: 24px 0 0;
+  max-width: 520px;
+  font-size: clamp(17px, 1.6vw, 21px);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.hero-actions {
+  margin-top: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 26px;
+  border-radius: 999px;
+  background: #f5f5f7;
+  color: #000;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(255, 179, 64, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.cta span {
+  transition: transform 0.2s ease;
+}
+
+.cta:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 48px rgba(255, 179, 64, 0.3);
+}
+
+.cta:hover span {
+  transform: translateX(3px);
+}
+
+.cta-secondary {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: color 0.2s ease;
+}
+
+.cta-secondary:hover {
+  color: var(--text);
+}
+
+.hero-hint {
+  position: absolute;
+  bottom: 28px;
+  right: clamp(20px, 4vw, 48px);
+  z-index: 2;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .hero {
+    align-items: flex-start;
+  }
+  .hero-shade {
+    background: linear-gradient(rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 45%, transparent 65%),
+      linear-gradient(transparent 80%, #000 100%);
+  }
+  .hero-glow {
+    top: auto;
+    bottom: 4%;
+    right: 50%;
+    transform: translateX(50%);
+    width: 80vw;
+  }
+}
+
+/* ---------- How it works ---------- */
+
+.how {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 96px clamp(20px, 4vw, 48px) 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.how h2 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  max-width: 640px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feature {
+  padding: 28px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
+}
+
+.feature h3 {
+  margin: 0 0 10px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.feature p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+/* ---------- Footer ---------- */
+
+.home-footer {
+  border-top: 1px solid var(--line);
+  padding: 24px clamp(20px, 4vw, 48px) 40px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.home-footer p {
+  margin: 0;
+  max-width: 1120px;
+}
+
+.home-footer a {
+  color: var(--text-2);
+  text-decoration: underline;
+}
