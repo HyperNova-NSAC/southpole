@@ -1,36 +1,50 @@
+/** The part of the app state that lives in the URL so a result can be shared. */
 export type Selection = {
   siteId: string;
   landingUtc: string;
   profileId: string;
-  compareSiteId: string;
+  /** Only set for a typed (custom) location. */
+  latDeg?: number;
+  lonDegEast?: number;
 };
+
+export const CUSTOM_SITE_ID = "custom";
 
 export const DEFAULT_SELECTION: Selection = {
   siteId: "shackleton-rim",
   landingUtc: "2027-03-03T00:00:00Z",
   profileId: "small-lander",
-  compareSiteId: "nobile-rim-1",
 };
 
 export function selectionFromSearch(search: string): Selection {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  const siteId = params.get("site") || DEFAULT_SELECTION.siteId;
   const profileId = params.get("profile") || DEFAULT_SELECTION.profileId;
-  const compareSiteId = params.get("compare") || DEFAULT_SELECTION.compareSiteId;
   const date = params.get("date");
-  return {
-    siteId,
-    profileId,
-    compareSiteId,
-    landingUtc: date ? dateToUtc(date) : DEFAULT_SELECTION.landingUtc,
-  };
+  const landingUtc = date ? dateToUtc(date) : DEFAULT_SELECTION.landingUtc;
+
+  const lat = Number.parseFloat(params.get("lat") ?? "");
+  const lon = Number.parseFloat(params.get("lon") ?? "");
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    return { siteId: CUSTOM_SITE_ID, landingUtc, profileId, latDeg: lat, lonDegEast: lon };
+  }
+
+  const siteId = params.get("site") || DEFAULT_SELECTION.siteId;
+  return { siteId, landingUtc, profileId };
 }
 
 export function searchFromSelection(selection: Selection): string {
   const params = new URLSearchParams();
-  params.set("site", selection.siteId);
+  const custom =
+    selection.siteId === CUSTOM_SITE_ID &&
+    selection.latDeg !== undefined &&
+    selection.lonDegEast !== undefined;
+  if (custom) {
+    params.set("lat", String(selection.latDeg));
+    params.set("lon", String(selection.lonDegEast));
+  } else {
+    params.set("site", selection.siteId);
+  }
   params.set("date", dateParam(selection.landingUtc));
-  params.set("compare", selection.compareSiteId);
   params.set("profile", selection.profileId);
   return `?${params.toString()}`;
 }
