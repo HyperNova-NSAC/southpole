@@ -43,6 +43,94 @@
       "agency": "NASA",
       "notes": "Tranquility Base. Equatorial contrast site.",
       "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-059C"
+    },
+    {
+      "id": "nobile-rim-2",
+      "name": "Nobile Rim 2",
+      "latDeg": -85.33,
+      "lonDegEast": 31.22,
+      "heightM": 6136.2,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "malapert-massif",
+      "name": "Malapert Massif",
+      "latDeg": -85.99,
+      "lonDegEast": 2.0,
+      "heightM": 5167.2,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "haworth",
+      "name": "Haworth",
+      "latDeg": -86.75,
+      "lonDegEast": -21.8,
+      "heightM": 1539.9,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "mons-mouton",
+      "name": "Mons Mouton",
+      "latDeg": -84.5,
+      "lonDegEast": 30.9,
+      "heightM": 5042.2,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "de-gerlache-rim-2",
+      "name": "de Gerlache Rim 2",
+      "latDeg": -88.48,
+      "lonDegEast": -68.4,
+      "heightM": 1481.3,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "slater-plain",
+      "name": "Slater Plain",
+      "latDeg": -88.1,
+      "lonDegEast": 80.0,
+      "heightM": -419.8,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "peak-near-cabeus-b",
+      "name": "Peak near Cabeus B",
+      "latDeg": -84.75,
+      "lonDegEast": -35.5,
+      "heightM": -2877.2,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Artemis III candidate region center (approx). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "apollo-12",
+      "name": "Apollo 12",
+      "latDeg": -3.01239,
+      "lonDegEast": -23.42157,
+      "heightM": 0,
+      "category": "apollo",
+      "agency": "NASA",
+      "notes": "Equatorial contrast site.",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-099C"
     }
   ]
 }
