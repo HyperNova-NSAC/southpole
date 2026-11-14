@@ -113,4 +113,22 @@ describe("loadMissionData", () => {
       expect(result.files.mask.maskElDeg.every((value) => value === 0)).toBe(true);
     }
   });
+
+  it("asks the API when the cached file does not cover the landing", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("-sun.json")) return respond(table("sun"));
+      if (url.includes("-earth.json")) return respond(table("earth"));
+      if (url.includes("body=sun")) return respond(table("sun"));
+      if (url.includes("body=earth")) return respond(table("earth"));
+      if (url.includes("/data/masks/")) return respond(mask());
+      return respond("no", 404, "text/plain");
+    }) as typeof fetch;
+
+    const result = await loadMissionData(site, "2027-08-01T00:00:00Z", 336, fetchImpl);
+    expect(result.ok).toBe(true);
+    expect(calls.some((url) => url.includes("/api/horizons"))).toBe(true);
+  });
 });

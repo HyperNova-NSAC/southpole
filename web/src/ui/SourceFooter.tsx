@@ -4,6 +4,7 @@ type SourceFooterProps = {
   links: Links;
   lat: number;
   lon: number;
+  compact?: boolean;
 };
 
 const MOON_RADIUS_M = 1_737_400;
@@ -40,11 +41,11 @@ function fill(template: string, lat: number, lon: number, zoom: number): string 
     .replaceAll("{northDeg}", String(northDeg));
 }
 
-export function SourceFooter({ links, lat, lon }: SourceFooterProps) {
+export function SourceFooter({ links, lat, lon, compact = false }: SourceFooterProps) {
   const zoom = 1;
   return (
-    <footer className="footer">
-      <p>{links.credit}</p>
+    <footer className={compact ? "footer compact" : "footer"}>
+      {compact ? null : <p>{links.credit}</p>}
       <div className="footer-links">
         <a href={fill(links.quickmap, lat, lon, zoom)}>See this place in QuickMap</a>
         <a href={fill(links.moontrek, lat, lon, zoom)}>See this place in Moon Trek</a>
