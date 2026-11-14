@@ -13,7 +13,6 @@ type AppState = {
   customSite: Site | null;
   playheadUtc: string;
   playing: boolean;
-  tourStep: number | null;
   aboutOpen: boolean;
   status: AppStatus;
   errorMessage: string | null;
@@ -24,7 +23,6 @@ type AppState = {
   setPlayheadUtc: (playheadUtc: string) => void;
   setPlaying: (playing: boolean) => void;
   advancePlayhead: (durationHours: number) => void;
-  setTourStep: (tourStep: number | null) => void;
   setAboutOpen: (aboutOpen: boolean) => void;
   setStatus: (status: AppStatus, errorMessage: string | null) => void;
 };
@@ -52,7 +50,6 @@ export const useAppStore = create<AppState>((set) => ({
   customSite: initialCustom,
   playheadUtc: initial.landingUtc,
   playing: false,
-  tourStep: null,
   aboutOpen: false,
   status: "loading",
   errorMessage: null,
@@ -63,7 +60,6 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({ customSite: site, siteId: site.id, playheadUtc: state.landingUtc, playing: false })),
   setPlayheadUtc: (playheadUtc) => set({ playheadUtc }),
   setPlaying: (playing) => set({ playing }),
-  setTourStep: (tourStep) => set({ tourStep }),
   setAboutOpen: (aboutOpen) => set({ aboutOpen }),
   advancePlayhead: (durationHours) =>
     set((state) => {

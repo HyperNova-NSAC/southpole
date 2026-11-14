@@ -14,6 +14,9 @@ export default defineConfig({
     },
   },
   server: {
+    // Node's default "localhost" is IPv6-only on this machine. Chrome opens
+    // 127.0.0.1 and gets a refused connection.
+    host: "127.0.0.1",
     proxy: {
       "/api": "http://127.0.0.1:8000",
     },
