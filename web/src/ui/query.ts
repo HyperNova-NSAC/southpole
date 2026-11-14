@@ -2,7 +2,7 @@
 export type Selection = {
   siteId: string;
   landingUtc: string;
-  profileId: string;
+  durationHours: number;
   /** Only set for a typed (custom) location. */
   latDeg?: number;
   lonDegEast?: number;
@@ -10,26 +10,80 @@ export type Selection = {
 
 export const CUSTOM_SITE_ID = "custom";
 
+/** The window the page opens on, matching the old 14-day lander. */
+export const DEFAULT_WINDOW_DAYS = 14;
+/** Horizons samples are half an hour apart, so a shorter window has nothing new to show. */
+export const MIN_WINDOW_MINUTES = 30;
+export const MAX_WINDOW_DAYS = 180;
+
+export type WindowUnit = "minutes" | "hours" | "days";
+
+const UNIT_MINUTES: Record<WindowUnit, number> = {
+  minutes: 1,
+  hours: 60,
+  days: 24 * 60,
+};
+
+/** Older links named a profile instead of a length. */
+const LEGACY_PROFILE_DAYS: Record<string, number> = {
+  "small-lander": 14,
+  "long-stay": 100,
+};
+
 export const DEFAULT_SELECTION: Selection = {
   siteId: "shackleton-rim",
   landingUtc: "2027-03-03T00:00:00Z",
-  profileId: "small-lander",
+  durationHours: DEFAULT_WINDOW_DAYS * 24,
 };
+
+/** Snap a length onto the half-hour sample step and keep it inside 30 minutes to 180 days. */
+export function clampWindowMinutes(minutes: number): number {
+  const snapped = Math.round(minutes / MIN_WINDOW_MINUTES) * MIN_WINDOW_MINUTES;
+  const maxMinutes = MAX_WINDOW_DAYS * UNIT_MINUTES.days;
+  return Math.min(maxMinutes, Math.max(MIN_WINDOW_MINUTES, snapped));
+}
+
+export function durationHoursFromAmount(amount: number, unit: WindowUnit): number {
+  return clampWindowMinutes(amount * UNIT_MINUTES[unit]) / 60;
+}
+
+/** Coarsest unit that still shows the length as a whole number. */
+export function windowUnit(durationHours: number): WindowUnit {
+  const minutes = clampWindowMinutes(durationHours * 60);
+  if (minutes % UNIT_MINUTES.days === 0) return "days";
+  if (minutes % UNIT_MINUTES.hours === 0) return "hours";
+  return "minutes";
+}
+
+export function windowFieldLimits(unit: WindowUnit): { min: number; max: number; step: number } {
+  if (unit === "minutes") return { min: MIN_WINDOW_MINUTES, max: MAX_WINDOW_DAYS * UNIT_MINUTES.days, step: MIN_WINDOW_MINUTES };
+  if (unit === "hours") return { min: 0.5, max: MAX_WINDOW_DAYS * 24, step: 0.5 };
+  return { min: 1, max: MAX_WINDOW_DAYS, step: 1 };
+}
+
+/** The number to show when the length is already committed and the unit is chosen. */
+export function formatWindowAmount(durationHours: number, unit: WindowUnit): string {
+  const amount = clampWindowMinutes(durationHours * 60) / UNIT_MINUTES[unit];
+  if (unit === "minutes") return String(Math.round(amount));
+  if (Number.isInteger(amount)) return String(amount);
+  if (unit === "hours") return amount.toFixed(1);
+  return String(Math.round(amount * 1000) / 1000);
+}
 
 export function selectionFromSearch(search: string): Selection {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  const profileId = params.get("profile") || DEFAULT_SELECTION.profileId;
+  const durationHours = windowMinutesFromParams(params) / 60;
   const date = params.get("date");
   const landingUtc = date ? dateToUtc(date) : DEFAULT_SELECTION.landingUtc;
 
   const lat = Number.parseFloat(params.get("lat") ?? "");
   const lon = Number.parseFloat(params.get("lon") ?? "");
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    return { siteId: CUSTOM_SITE_ID, landingUtc, profileId, latDeg: lat, lonDegEast: lon };
+    return { siteId: CUSTOM_SITE_ID, landingUtc, durationHours, latDeg: lat, lonDegEast: lon };
   }
 
   const siteId = params.get("site") || DEFAULT_SELECTION.siteId;
-  return { siteId, landingUtc, profileId };
+  return { siteId, landingUtc, durationHours };
 }
 
 export function searchFromSelection(selection: Selection): string {
@@ -45,8 +99,29 @@ export function searchFromSelection(selection: Selection): string {
     params.set("site", selection.siteId);
   }
   params.set("date", dateParam(selection.landingUtc));
-  params.set("profile", selection.profileId);
+  const minutes = clampWindowMinutes(selection.durationHours * 60);
+  if (minutes % UNIT_MINUTES.days === 0) params.set("days", String(minutes / UNIT_MINUTES.days));
+  else if (minutes % UNIT_MINUTES.hours === 0) params.set("hours", String(minutes / UNIT_MINUTES.hours));
+  else params.set("minutes", String(minutes));
   return `?${params.toString()}`;
+}
+
+function readAmount(raw: string | null): number | null {
+  if (raw === null || raw === "") return null;
+  const amount = Number.parseFloat(raw);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function windowMinutesFromParams(params: URLSearchParams): number {
+  const minutes = readAmount(params.get("minutes"));
+  if (minutes !== null) return clampWindowMinutes(minutes);
+  const hours = readAmount(params.get("hours"));
+  if (hours !== null) return clampWindowMinutes(hours * UNIT_MINUTES.hours);
+  const days = readAmount(params.get("days"));
+  if (days !== null) return clampWindowMinutes(days * UNIT_MINUTES.days);
+  const legacy = params.get("profile");
+  if (legacy && legacy in LEGACY_PROFILE_DAYS) return LEGACY_PROFILE_DAYS[legacy] * UNIT_MINUTES.days;
+  return DEFAULT_WINDOW_DAYS * UNIT_MINUTES.days;
 }
 
 function dateToUtc(date: string): string {

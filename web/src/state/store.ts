@@ -8,7 +8,7 @@ export type AppStatus = "ready" | "loading" | "error";
 type AppState = {
   siteId: string;
   landingUtc: string;
-  profileId: string;
+  durationHours: number;
   /** A typed location that is not in the catalog. */
   customSite: Site | null;
   playheadUtc: string;
@@ -18,7 +18,7 @@ type AppState = {
   errorMessage: string | null;
   setSiteId: (siteId: string) => void;
   setLandingUtc: (landingUtc: string) => void;
-  setProfileId: (profileId: string) => void;
+  setDurationHours: (durationHours: number) => void;
   setCustomSite: (site: Site) => void;
   setPlayheadUtc: (playheadUtc: string) => void;
   setPlaying: (playing: boolean) => void;
@@ -46,7 +46,7 @@ const initialCustom =
 export const useAppStore = create<AppState>((set) => ({
   siteId: initial.siteId,
   landingUtc: initial.landingUtc,
-  profileId: initial.profileId,
+  durationHours: initial.durationHours,
   customSite: initialCustom,
   playheadUtc: initial.landingUtc,
   playing: false,
@@ -55,7 +55,16 @@ export const useAppStore = create<AppState>((set) => ({
   errorMessage: null,
   setSiteId: (siteId) => set((state) => ({ siteId, playheadUtc: state.landingUtc, playing: false })),
   setLandingUtc: (landingUtc) => set({ landingUtc, playheadUtc: landingUtc, playing: false }),
-  setProfileId: (profileId) => set({ profileId, playing: false }),
+  setDurationHours: (durationHours) =>
+    set((state) => {
+      const end = Date.parse(state.landingUtc) + durationHours * 3_600_000;
+      const playhead = Date.parse(state.playheadUtc);
+      return {
+        durationHours,
+        playing: false,
+        playheadUtc: playhead > end ? new Date(end).toISOString() : state.playheadUtc,
+      };
+    }),
   setCustomSite: (site) =>
     set((state) => ({ customSite: site, siteId: site.id, playheadUtc: state.landingUtc, playing: false })),
   setPlayheadUtc: (playheadUtc) => set({ playheadUtc }),

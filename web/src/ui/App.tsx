@@ -39,7 +39,7 @@ export function App() {
 
   const siteId = useAppStore((state) => state.siteId);
   const landingUtc = useAppStore((state) => state.landingUtc);
-  const profileId = useAppStore((state) => state.profileId);
+  const durationHours = useAppStore((state) => state.durationHours);
   const customSite = useAppStore((state) => state.customSite);
   const playheadUtc = useAppStore((state) => state.playheadUtc);
   const playing = useAppStore((state) => state.playing);
@@ -49,7 +49,7 @@ export function App() {
   const {
     setSiteId,
     setLandingUtc,
-    setProfileId,
+    setDurationHours,
     setCustomSite,
     setPlayheadUtc,
     setPlaying,
@@ -73,7 +73,11 @@ export function App() {
     () => (siteId === CUSTOM_SITE_ID ? customSite : sites.find((item) => item.id === siteId) ?? null),
     [siteId, customSite, sites],
   );
-  const profile = profiles.find((item) => item.id === profileId) ?? null;
+  // Night and Earth checks stay on the small-lander limits. Only the window length is chosen.
+  const profile = useMemo(() => {
+    const rules = profiles.find((item) => item.id === "small-lander") ?? profiles[0];
+    return rules ? { ...rules, durationHours } : null;
+  }, [profiles, durationHours]);
 
   /** Typed coordinates snap to a catalog site within 2 km, otherwise become a custom site. */
   function applyCoords(latDeg: number, lonDegEast: number) {
@@ -87,7 +91,7 @@ export function App() {
     setCustomSite(custom);
   }
 
-  // Fall back to the default site or profile when the URL names one we do not have.
+  // Fall back to the default site when the URL names one we do not have.
   useEffect(() => {
     if (sites.length === 0) return;
     if (siteId === CUSTOM_SITE_ID) {
@@ -97,23 +101,18 @@ export function App() {
     if (!sites.some((item) => item.id === siteId)) setSiteId("shackleton-rim");
   }, [sites, siteId, customSite, setSiteId]);
 
-  useEffect(() => {
-    if (profiles.length === 0) return;
-    if (!profiles.some((item) => item.id === profileId)) setProfileId(profiles[0].id);
-  }, [profiles, profileId, setProfileId]);
-
   // Mirror the selection into the URL so any result can be shared.
   useEffect(() => {
     const custom = siteId === CUSTOM_SITE_ID ? customSite : null;
     const next = searchFromSelection({
       siteId,
       landingUtc,
-      profileId,
+      durationHours,
       latDeg: custom?.latDeg,
       lonDegEast: custom?.lonDegEast,
     });
     if (window.location.search !== next) window.history.replaceState(null, "", next);
-  }, [siteId, landingUtc, profileId, customSite]);
+  }, [siteId, landingUtc, durationHours, customSite]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -182,9 +181,8 @@ export function App() {
             sites={sites}
             site={site}
             landingUtc={landingUtc}
-            profiles={profiles}
-            profileId={profileId}
-            onProfile={setProfileId}
+            durationHours={durationHours}
+            onDuration={setDurationHours}
             onCoords={applyCoords}
             onPreset={setSiteId}
             onLanding={setLandingUtc}
