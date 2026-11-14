@@ -13,6 +13,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# rasterio's compiled extension links against libexpat at runtime; python:3.12-slim
+# does not include it. Install the minimal OS libs rasterio needs on aarch64/x86_64.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libexpat1 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Dependencies first so code edits do not reinstall them. rasterio, pyproj and numpy
 # ship manylinux wheels (GDAL and PROJ included), so no compiler or system libs are needed.
 COPY requirements.txt .
@@ -23,6 +30,19 @@ RUN pip install -r requirements.txt
 COPY pipeline ./pipeline
 COPY server ./server
 COPY web/public/data ./web/public/data
+
+# Smoke-test every import at build time so a crash at module-level (e.g. pyproj
+# CRS construction, rasterio GDAL bindings) causes the BUILD to fail with a clear
+# error message rather than a silent container exit at runtime.
+RUN python -c "\
+import fastapi, uvicorn, httpx, pydantic, numpy, rasterio; \
+from pyproj import CRS, Transformer; \
+from pipeline.models import HorizonMask, HorizonsTable, Site; \
+from pipeline.dem_grid import DemGrid, downsample, latlon_to_stereo; \
+from pipeline.horizon import flat_mask, march_skyline; \
+from pipeline.neighborhood import neighborhood_cells; \
+from server.horizons_proxy import get_horizons; \
+print('All imports OK')"
 
 # Run as an unprivileged user. The Horizons proxy caches responses in server/cache,
 # which compose mounts as a volume; create it here so the volume inherits this owner.
