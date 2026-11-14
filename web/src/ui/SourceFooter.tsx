@@ -45,8 +45,10 @@ export function SourceFooter({ links, lat, lon }: SourceFooterProps) {
   return (
     <footer className="footer">
       <p>{links.credit}</p>
-      <a href={fill(links.quickmap, lat, lon, zoom)}>See this place in QuickMap</a>
-      <a href={fill(links.moontrek, lat, lon, zoom)}>See this place in Moon Trek</a>
+      <div className="footer-links">
+        <a href={fill(links.quickmap, lat, lon, zoom)}>See this place in QuickMap</a>
+        <a href={fill(links.moontrek, lat, lon, zoom)}>See this place in Moon Trek</a>
+      </div>
     </footer>
   );
 }

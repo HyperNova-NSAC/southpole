@@ -9,8 +9,8 @@ type SiteDateBarProps = {
 export function SiteDateBar({ sites, siteId, landingDate }: SiteDateBarProps) {
   return (
     <div className="site-date">
-      <label>
-        Where{" "}
+      <label className="field">
+        <span>Site</span>
         <select defaultValue={siteId} aria-label="Landing site">
           {sites.map((site) => (
             <option key={site.id} value={site.id}>
@@ -19,8 +19,9 @@ export function SiteDateBar({ sites, siteId, landingDate }: SiteDateBarProps) {
           ))}
         </select>
       </label>
-      <label>
-        When <input type="date" defaultValue={landingDate} aria-label="Landing date" />
+      <label className="field">
+        <span>Date</span>
+        <input type="date" defaultValue={landingDate} aria-label="Landing date" />
       </label>
     </div>
   );
