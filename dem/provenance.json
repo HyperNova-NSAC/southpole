@@ -1,0 +1,40 @@
+{
+  "product": "LDEM_80S_80MPP_ADJ",
+  "localPath": "dem/LDEM_80S_80MPP_ADJ.TIF",
+  "bytes": 189158392,
+  "sha256": "82030dcbdd7c4bb0c7d858e9b4b293b9f2cda5a543ba31ec0f42784bd6beee5a",
+  "downloadedOn": "2026-11-14",
+  "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF",
+  "productPage": "https://pgda.gsfc.nasa.gov/products/90",
+  "whyThisFile": "Moon Trek had no direct elevation subset. This PGDA product is the LOLA 80 m/pixel south-polar GeoTIFF named in DESIGN.md. It covers 80 S to the pole and includes Shackleton. The 181 MB file stays out of git; README has the curl command.",
+  "format": "BigTIFF, little-endian",
+  "width": 7600,
+  "height": 7600,
+  "pixelSizeM": 80,
+  "crsName": "Moon (2015) - Sphere / Ocentric / South Polar",
+  "proj": "+proj=stere +lat_0=-90 +lon_0=0 +k=1 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs",
+  "projection": {
+    "method": "stereographic",
+    "lat0Deg": -90,
+    "lon0Deg": 0,
+    "scaleFactor": 1,
+    "falseEastingM": 0,
+    "falseNorthingM": 0,
+    "radiusM": 1737400,
+    "linearUnits": "metre"
+  },
+  "tiepoint": {
+    "pixelCol": 0,
+    "pixelRow": 0,
+    "xM": -304000,
+    "yM": 304000,
+    "note": "Pixel (0, 0) is the north-west corner. x increases east. y decreases south. The grid spans x and y from -304000 m to 304000 m, which is 80 S to the pole."
+  },
+  "elevation": {
+    "units": "metres",
+    "minM": -7295.51708984375,
+    "maxM": 7026.3310546875,
+    "note": "GDAL history records gmt grdmath multiplying the source grid by 1000, so the stored heights are metres. The source grid's x/y range metadata is still in kilometres; the GeoTIFF tiepoint and pixel scale are metres."
+  },
+  "frame": "Moon Mean Earth, sphere radius 1737400 m. Product page cites JPL DE421."
+}
