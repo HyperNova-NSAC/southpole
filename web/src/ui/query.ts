@@ -3,6 +3,8 @@ export type Selection = {
   siteId: string;
   landingUtc: string;
   durationHours: number;
+  /** Longest continuous night the landing is allowed, in hours. */
+  maxNightHours: number;
   /** Only set for a typed (custom) location. */
   latDeg?: number;
   lonDegEast?: number;
@@ -12,6 +14,8 @@ export const CUSTOM_SITE_ID = "custom";
 
 /** The window the page opens on, matching the old 14-day lander. */
 export const DEFAULT_WINDOW_DAYS = 14;
+/** The small-lander battery limit the page opens on. */
+export const DEFAULT_NIGHT_HOURS = 50;
 /** Horizons samples are half an hour apart, so a shorter window has nothing new to show. */
 export const MIN_WINDOW_MINUTES = 30;
 export const MAX_WINDOW_DAYS = 180;
@@ -34,6 +38,7 @@ export const DEFAULT_SELECTION: Selection = {
   siteId: "shackleton-rim",
   landingUtc: "2027-03-03T00:00:00Z",
   durationHours: DEFAULT_WINDOW_DAYS * 24,
+  maxNightHours: DEFAULT_NIGHT_HOURS,
 };
 
 /** Snap a length onto the half-hour sample step and keep it inside 30 minutes to 180 days. */
@@ -73,17 +78,18 @@ export function formatWindowAmount(durationHours: number, unit: WindowUnit): str
 export function selectionFromSearch(search: string): Selection {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   const durationHours = windowMinutesFromParams(params) / 60;
+  const maxNightHours = nightMinutesFromParams(params) / 60;
   const date = params.get("date");
   const landingUtc = date ? dateToUtc(date) : DEFAULT_SELECTION.landingUtc;
 
   const lat = Number.parseFloat(params.get("lat") ?? "");
   const lon = Number.parseFloat(params.get("lon") ?? "");
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    return { siteId: CUSTOM_SITE_ID, landingUtc, durationHours, latDeg: lat, lonDegEast: lon };
+    return { siteId: CUSTOM_SITE_ID, landingUtc, durationHours, maxNightHours, latDeg: lat, lonDegEast: lon };
   }
 
   const siteId = params.get("site") || DEFAULT_SELECTION.siteId;
-  return { siteId, landingUtc, durationHours };
+  return { siteId, landingUtc, durationHours, maxNightHours };
 }
 
 export function searchFromSelection(selection: Selection): string {
@@ -103,7 +109,27 @@ export function searchFromSelection(selection: Selection): string {
   if (minutes % UNIT_MINUTES.days === 0) params.set("days", String(minutes / UNIT_MINUTES.days));
   else if (minutes % UNIT_MINUTES.hours === 0) params.set("hours", String(minutes / UNIT_MINUTES.hours));
   else params.set("minutes", String(minutes));
+  writeNight(params, selection.maxNightHours);
   return `?${params.toString()}`;
+}
+
+/** The default 50 h limit stays out of the link. Any other limit is written in its coarsest exact unit. */
+function writeNight(params: URLSearchParams, hours: number) {
+  const minutes = clampWindowMinutes(hours * 60);
+  if (minutes === DEFAULT_NIGHT_HOURS * 60) return;
+  if (minutes % UNIT_MINUTES.days === 0) params.set("nightDays", String(minutes / UNIT_MINUTES.days));
+  else if (minutes % UNIT_MINUTES.hours === 0) params.set("nightHours", String(minutes / UNIT_MINUTES.hours));
+  else params.set("nightMinutes", String(minutes));
+}
+
+function nightMinutesFromParams(params: URLSearchParams): number {
+  const minutes = readAmount(params.get("nightMinutes"));
+  if (minutes !== null) return clampWindowMinutes(minutes);
+  const hours = readAmount(params.get("nightHours"));
+  if (hours !== null) return clampWindowMinutes(hours * UNIT_MINUTES.hours);
+  const days = readAmount(params.get("nightDays"));
+  if (days !== null) return clampWindowMinutes(days * UNIT_MINUTES.days);
+  return DEFAULT_NIGHT_HOURS * 60;
 }
 
 function readAmount(raw: string | null): number | null {

@@ -16,7 +16,9 @@ type LocationCardProps = {
   site: Site | null;
   landingUtc: string;
   durationHours: number;
+  maxNightHours: number;
   onDuration: (durationHours: number) => void;
+  onNightLimit: (maxNightHours: number) => void;
   onCoords: (latDeg: number, lonDegEast: number) => void;
   onPreset: (siteId: string) => void;
   onLanding: (landingUtc: string) => void;
@@ -48,7 +50,9 @@ export function LocationCard({
   site,
   landingUtc,
   durationHours,
+  maxNightHours,
   onDuration,
+  onNightLimit,
   onCoords,
   onPreset,
   onLanding,
@@ -56,8 +60,6 @@ export function LocationCard({
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [when, setWhen] = useState(toInputValue(landingUtc));
-  const [unit, setUnit] = useState<WindowUnit>(() => windowUnit(durationHours));
-  const [amount, setAmount] = useState(() => formatWindowAmount(durationHours, windowUnit(durationHours)));
 
   // Keep the fields in step when the site changes from elsewhere (preset, URL).
   useEffect(() => {
@@ -67,39 +69,18 @@ export function LocationCard({
   }, [site]);
 
   useEffect(() => setWhen(toInputValue(landingUtc)), [landingUtc]);
-  useEffect(() => setAmount(formatWindowAmount(durationHours, unit)), [durationHours, unit]);
 
   const latValue = parseCoord(lat, 90);
   const lonValue = parseCoord(lon, 360);
   const coordsValid = latValue !== null && lonValue !== null;
-
-  function commitAmount(raw: string) {
-    const parsed = Number.parseFloat(raw);
-    if (!Number.isFinite(parsed)) {
-      setAmount(formatWindowAmount(durationHours, unit));
-      return;
-    }
-    const hours = durationHoursFromAmount(parsed, unit);
-    setAmount(formatWindowAmount(hours, unit));
-    if (Math.round(hours * 60) !== Math.round(durationHours * 60)) onDuration(hours);
-  }
-
-  function changeUnit(next: WindowUnit) {
-    const parsed = Number.parseFloat(amount);
-    if (Number.isFinite(parsed)) {
-      const hours = durationHoursFromAmount(parsed, unit);
-      if (Math.round(hours * 60) !== Math.round(durationHours * 60)) onDuration(hours);
-    }
-    setUnit(next);
-  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (coordsValid) onCoords(latValue, lonValue);
     const next = fromInputValue(when);
     if (next && next !== landingUtc) onLanding(next);
-    const windowField = event.currentTarget.elements.namedItem("windowLength");
-    if (windowField instanceof HTMLInputElement) commitAmount(windowField.value);
+    commitNamed(event.currentTarget, "windowLength", durationHours, onDuration);
+    commitNamed(event.currentTarget, "nightLimit", maxNightHours, onNightLimit);
   }
 
   const isCustom = site?.id === CUSTOM_SITE_ID;
@@ -151,35 +132,18 @@ export function LocationCard({
             <em>°E</em>
           </div>
         </label>
-        <label className="field wide">
-          <span>Window</span>
-          <div className="input-wrap">
-            <input
-              name="windowLength"
-              type="number"
-              inputMode={unit === "minutes" ? "numeric" : "decimal"}
-              min={windowFieldLimits(unit).min}
-              max={windowFieldLimits(unit).max}
-              step={windowFieldLimits(unit).step}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              onBlur={(event) => {
-                if (event.target instanceof HTMLInputElement) commitAmount(event.target.value);
-              }}
-              aria-label="Window length"
-            />
-            <select
-              className="unit"
-              aria-label="Window unit"
-              value={unit}
-              onChange={(event) => changeUnit(event.target.value as WindowUnit)}
-            >
-              <option value="minutes">Minutes</option>
-              <option value="hours">Hours</option>
-              <option value="days">Days</option>
-            </select>
-          </div>
-        </label>
+        <DurationField
+          label="Window"
+          name="windowLength"
+          hours={durationHours}
+          onChange={onDuration}
+        />
+        <DurationField
+          label="Night limit"
+          name="nightLimit"
+          hours={maxNightHours}
+          onChange={onNightLimit}
+        />
         <label className="field wide">
           <span>Touchdown (UTC)</span>
           <div className="input-wrap">
@@ -214,4 +178,92 @@ export function LocationCard({
       </div>
     </form>
   );
+}
+
+/** A length in minutes, hours, or days. Commits on blur and when the unit changes. */
+function DurationField({
+  label,
+  name,
+  hours,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  hours: number;
+  onChange: (hours: number) => void;
+}) {
+  const [unit, setUnit] = useState<WindowUnit>(() => windowUnit(hours));
+  const [amount, setAmount] = useState(() => formatWindowAmount(hours, windowUnit(hours)));
+  const limits = windowFieldLimits(unit);
+
+  useEffect(() => setAmount(formatWindowAmount(hours, unit)), [hours, unit]);
+
+  function commit(raw: string) {
+    const parsed = Number.parseFloat(raw);
+    if (!Number.isFinite(parsed)) {
+      setAmount(formatWindowAmount(hours, unit));
+      return;
+    }
+    const next = durationHoursFromAmount(parsed, unit);
+    setAmount(formatWindowAmount(next, unit));
+    if (Math.round(next * 60) !== Math.round(hours * 60)) onChange(next);
+  }
+
+  function changeUnit(next: WindowUnit) {
+    const parsed = Number.parseFloat(amount);
+    if (Number.isFinite(parsed)) {
+      const converted = durationHoursFromAmount(parsed, unit);
+      if (Math.round(converted * 60) !== Math.round(hours * 60)) onChange(converted);
+    }
+    setUnit(next);
+  }
+
+  return (
+    <label className="field wide">
+      <span>{label}</span>
+      <div className="input-wrap">
+        <input
+          name={name}
+          type="number"
+          inputMode={unit === "minutes" ? "numeric" : "decimal"}
+          min={limits.min}
+          max={limits.max}
+          step={limits.step}
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          onBlur={(event) => {
+            if (event.target instanceof HTMLInputElement) commit(event.target.value);
+          }}
+          aria-label={label}
+        />
+        <select
+          name={`${name}-unit`}
+          className="unit"
+          aria-label={`${label} unit`}
+          value={unit}
+          onChange={(event) => changeUnit(event.target.value as WindowUnit)}
+        >
+          <option value="minutes">Minutes</option>
+          <option value="hours">Hours</option>
+          <option value="days">Days</option>
+        </select>
+      </div>
+    </label>
+  );
+}
+
+/** Read a duration field from the submitted form, including a value React state has not seen yet. */
+function commitNamed(
+  form: HTMLFormElement,
+  name: string,
+  currentHours: number,
+  onChange: (hours: number) => void,
+) {
+  const field = form.elements.namedItem(name);
+  const unitField = form.elements.namedItem(`${name}-unit`);
+  if (!(field instanceof HTMLInputElement) || !(unitField instanceof HTMLSelectElement)) return;
+  const parsed = Number.parseFloat(field.value);
+  if (!Number.isFinite(parsed)) return;
+  const next = durationHoursFromAmount(parsed, unitField.value as WindowUnit);
+  if (Math.round(next * 60) !== Math.round(currentHours * 60)) onChange(next);
 }

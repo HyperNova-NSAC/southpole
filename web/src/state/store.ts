@@ -9,6 +9,8 @@ type AppState = {
   siteId: string;
   landingUtc: string;
   durationHours: number;
+  /** Longest night the landing is allowed to have, in hours. */
+  maxNightHours: number;
   /** A typed location that is not in the catalog. */
   customSite: Site | null;
   playheadUtc: string;
@@ -19,6 +21,7 @@ type AppState = {
   setSiteId: (siteId: string) => void;
   setLandingUtc: (landingUtc: string) => void;
   setDurationHours: (durationHours: number) => void;
+  setMaxNightHours: (maxNightHours: number) => void;
   setCustomSite: (site: Site) => void;
   setPlayheadUtc: (playheadUtc: string) => void;
   setPlaying: (playing: boolean) => void;
@@ -64,6 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
   siteId: initial.siteId,
   landingUtc: initial.landingUtc,
   durationHours: initial.durationHours,
+  maxNightHours: initial.maxNightHours,
   customSite: initialCustom,
   playheadUtc: initial.landingUtc,
   playing: false,
@@ -82,6 +86,7 @@ export const useAppStore = create<AppState>((set) => ({
         playheadUtc: playhead > end ? new Date(end).toISOString() : state.playheadUtc,
       };
     }),
+  setMaxNightHours: (maxNightHours) => set({ maxNightHours }),
   setCustomSite: (site) =>
     set((state) => ({ customSite: site, siteId: site.id, playheadUtc: state.landingUtc, playing: false })),
   setPlayheadUtc: (playheadUtc) => set({ playheadUtc }),

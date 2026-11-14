@@ -40,6 +40,7 @@ export function App() {
   const siteId = useAppStore((state) => state.siteId);
   const landingUtc = useAppStore((state) => state.landingUtc);
   const durationHours = useAppStore((state) => state.durationHours);
+  const maxNightHours = useAppStore((state) => state.maxNightHours);
   const customSite = useAppStore((state) => state.customSite);
   const playheadUtc = useAppStore((state) => state.playheadUtc);
   const playing = useAppStore((state) => state.playing);
@@ -50,6 +51,7 @@ export function App() {
     setSiteId,
     setLandingUtc,
     setDurationHours,
+    setMaxNightHours,
     setCustomSite,
     setPlayheadUtc,
     setPlaying,
@@ -73,11 +75,11 @@ export function App() {
     () => (siteId === CUSTOM_SITE_ID ? customSite : sites.find((item) => item.id === siteId) ?? null),
     [siteId, customSite, sites],
   );
-  // Night and Earth checks stay on the small-lander limits. Only the window length is chosen.
+  // Earth must be in view at touchdown. The night limit is chosen on the page.
   const profile = useMemo(() => {
     const rules = profiles.find((item) => item.id === "small-lander") ?? profiles[0];
-    return rules ? { ...rules, durationHours } : null;
-  }, [profiles, durationHours]);
+    return rules ? { ...rules, durationHours, maxLongestDarkHours: maxNightHours } : null;
+  }, [profiles, durationHours, maxNightHours]);
 
   /** Typed coordinates snap to a catalog site within 2 km, otherwise become a custom site. */
   function applyCoords(latDeg: number, lonDegEast: number) {
@@ -108,11 +110,12 @@ export function App() {
       siteId,
       landingUtc,
       durationHours,
+      maxNightHours,
       latDeg: custom?.latDeg,
       lonDegEast: custom?.lonDegEast,
     });
     if (window.location.search !== next) window.history.replaceState(null, "", next);
-  }, [siteId, landingUtc, durationHours, customSite]);
+  }, [siteId, landingUtc, durationHours, maxNightHours, customSite]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -125,11 +128,14 @@ export function App() {
   }, []);
 
   // Load ephemerides and terrain, then evaluate the landing.
+  // The night limit only changes the verdict, so it does not reload this data.
   useEffect(() => {
-    if (!site || !profile) return;
+    const rules = profiles.find((item) => item.id === "small-lander") ?? profiles[0];
+    if (!site || !rules) return;
+    const active = { ...rules, durationHours, maxLongestDarkHours: useAppStore.getState().maxNightHours };
     let cancelled = false;
     useAppStore.getState().setStatus("loading", HORIZONS_LOADING);
-    void loadMissionData(site, landingUtc, profile.durationHours, fetch, (message) => {
+    void loadMissionData(site, landingUtc, durationHours, fetch, (message) => {
       if (!cancelled) useAppStore.getState().setStatus("loading", message);
     }).then((result) => {
       if (cancelled) return;
@@ -138,10 +144,10 @@ export function App() {
         return;
       }
       const { sun, earth, mask, terrainNote } = result.files;
-      const evaluated = evaluateMission(sun, earth, mask, landingUtc, profile.durationHours, EARTH_COMM_MARGIN_DEG);
+      const evaluated = evaluateMission(sun, earth, mask, landingUtc, durationHours, EARTH_COMM_MARGIN_DEG);
       const verdict = buildVerdict({
         metrics: evaluated.metrics,
-        profile,
+        profile: active,
         landing: evaluated.samples[0],
         commMarginDeg: EARTH_COMM_MARGIN_DEG,
       });
@@ -153,16 +159,16 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [site, profile, landingUtc]);
+  }, [site, profiles, landingUtc, durationHours]);
 
   useEffect(() => {
-    if (!playing || !profile) return;
+    if (!playing) return;
     const timer = window.setInterval(
-      () => useAppStore.getState().advancePlayhead(profile.durationHours),
+      () => useAppStore.getState().advancePlayhead(useAppStore.getState().durationHours),
       PLAYBACK_INTERVAL_MS,
     );
     return () => window.clearInterval(timer);
-  }, [playing, profile]);
+  }, [playing, durationHours]);
 
   const ready = status === "ready" && mission !== null && profile !== null;
   const samples = mission?.samples ?? [];
@@ -170,7 +176,17 @@ export function App() {
   const playheadIndex = nearestIndex(times, Date.parse(playheadUtc));
   const playhead = samples[playheadIndex] ?? null;
 
-  const summary = ready ? summarize(mission.verdict, mission.metrics, profile, mission.samples[0]) : null;
+  const verdict = useMemo(() => {
+    if (!mission || !profile || mission.samples.length === 0) return null;
+    return buildVerdict({
+      metrics: mission.metrics,
+      profile,
+      landing: mission.samples[0],
+      commMarginDeg: EARTH_COMM_MARGIN_DEG,
+    });
+  }, [mission, profile]);
+
+  const summary = ready && verdict ? summarize(verdict, mission.metrics, profile, mission.samples[0]) : null;
   const nextLandings = ready ? suggestDates(mission.index, profile).filter((iso) => iso !== landingUtc) : [];
 
   return (
@@ -191,7 +207,9 @@ export function App() {
             site={site}
             landingUtc={landingUtc}
             durationHours={durationHours}
+            maxNightHours={maxNightHours}
             onDuration={setDurationHours}
+            onNightLimit={setMaxNightHours}
             onCoords={applyCoords}
             onPreset={setSiteId}
             onLanding={setLandingUtc}

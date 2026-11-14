@@ -8,6 +8,7 @@ describe("selection query", () => {
       siteId: "apollo-11",
       landingUtc: "2027-01-15T00:00:00Z",
       durationHours: 720,
+      maxNightHours: 50,
     });
   });
 
@@ -39,17 +40,59 @@ describe("selection query", () => {
       siteId: "nobile-rim-1",
       landingUtc: "2027-03-03T00:00:00Z",
       durationHours: 336,
+      maxNightHours: 50,
     });
     expect(search).toBe("?site=nobile-rim-1&date=2027-03-03&days=14");
   });
 
   it("writes hours and minutes when the length is not a whole number of days", () => {
     expect(
-      searchFromSelection({ siteId: "shackleton-rim", landingUtc: "2027-03-03T00:00:00Z", durationHours: 6 }),
+      searchFromSelection({
+        siteId: "shackleton-rim",
+        landingUtc: "2027-03-03T00:00:00Z",
+        durationHours: 6,
+        maxNightHours: 50,
+      }),
     ).toBe("?site=shackleton-rim&date=2027-03-03&hours=6");
     expect(
-      searchFromSelection({ siteId: "shackleton-rim", landingUtc: "2027-03-03T00:00:00Z", durationHours: 1.5 }),
+      searchFromSelection({
+        siteId: "shackleton-rim",
+        landingUtc: "2027-03-03T00:00:00Z",
+        durationHours: 1.5,
+        maxNightHours: 50,
+      }),
     ).toBe("?site=shackleton-rim&date=2027-03-03&minutes=90");
+  });
+
+  it("reads and writes a night limit in hours, days, or minutes", () => {
+    expect(selectionFromSearch("?nightHours=10").maxNightHours).toBe(10);
+    expect(selectionFromSearch("?nightDays=2").maxNightHours).toBe(48);
+    expect(selectionFromSearch("?nightMinutes=90").maxNightHours).toBe(1.5);
+    expect(selectionFromSearch("").maxNightHours).toBe(50);
+    expect(selectionFromSearch("?nightHours=0").maxNightHours).toBe(0.5);
+    const search = searchFromSelection({
+      siteId: "apollo-11",
+      landingUtc: "2027-01-15T00:00:00Z",
+      durationHours: 336,
+      maxNightHours: 10,
+    });
+    expect(search).toBe("?site=apollo-11&date=2027-01-15&days=14&nightHours=10");
+    expect(
+      searchFromSelection({
+        siteId: "apollo-11",
+        landingUtc: "2027-01-15T00:00:00Z",
+        durationHours: 336,
+        maxNightHours: 48,
+      }),
+    ).toContain("nightDays=2");
+    expect(
+      searchFromSelection({
+        siteId: "apollo-11",
+        landingUtc: "2027-01-15T00:00:00Z",
+        durationHours: 336,
+        maxNightHours: 1.5,
+      }),
+    ).toContain("nightMinutes=90");
   });
 
   it("round-trips a typed location as lat and lon", () => {
@@ -57,6 +100,7 @@ describe("selection query", () => {
       siteId: "custom",
       landingUtc: "2027-03-03T00:00:00Z",
       durationHours: 336,
+      maxNightHours: 50,
       latDeg: -89.1,
       lonDegEast: 120.5,
     });
