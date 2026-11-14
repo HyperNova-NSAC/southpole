@@ -14,8 +14,16 @@ from __future__ import annotations
 
 import urllib.parse
 from datetime import datetime, timezone
+from typing import Literal
+
+import httpx
 
 from pipeline.models import HorizonsTable
+
+BODY_COMMAND = {
+    "sun": "10",
+    "earth": "399",
+}
 
 COLUMNS = {
     "time": 0,
@@ -118,6 +126,11 @@ def parse_result_text(
         )
     if len(samples) < 2:
         raise ValueError("Horizons table did not contain two samples")
+    for sample in samples:
+        az = sample["azDeg"] % 360.0
+        if az < 0:
+            az += 360.0
+        sample["azDeg"] = az
     return HorizonsTable.model_validate(
         {
             "body": body,
@@ -131,4 +144,44 @@ def parse_result_text(
             "source": "JPL Horizons",
             "samples": samples,
         }
+    )
+
+
+def fetch(
+    *,
+    body: Literal["sun", "earth"],
+    site_id: str,
+    lat_deg: float,
+    lon_deg_east: float,
+    alt_km: float,
+    start: str,
+    stop: str,
+    timeout_s: float = 60.0,
+) -> HorizonsTable:
+    """Query JPL Horizons and return a parsed HorizonsTable.
+
+    Terrain's API proxy calls this. Sky owns the richer CLI in fetch_horizons.py;
+    this is the shared live request used until that lands on main.
+    """
+    command = BODY_COMMAND[body]
+    # DESIGN.md: SITE_COORD is lon,lat,alt_km (east-positive longitude).
+    site_coord = f"{lon_deg_east},{lat_deg},{alt_km}"
+    url = query_url(command, site_coord, start, stop)
+    with httpx.Client(timeout=timeout_s) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        payload = response.json()
+    result = payload.get("result")
+    if not isinstance(result, str) or "$$SOE" not in result:
+        raise ValueError("Horizons response did not contain an observer table")
+    queried_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return parse_result_text(
+        result,
+        body=body,
+        site_id=site_id,
+        lat_deg=lat_deg,
+        lon_deg_east=lon_deg_east,
+        alt_km=alt_km,
+        query_url_value=url,
+        queried_at=queried_at,
     )
