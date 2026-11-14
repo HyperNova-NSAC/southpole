@@ -23,6 +23,7 @@ export function indexOnTrack(
 export function sunHoverLine(track: { lit: boolean }[], fromIndex: number): string {
   const setAt = track.slice(fromIndex).findIndex((point) => !point.lit);
   if (setAt < 0) return "The Sun stays up for this landing.";
+  if (setAt === 0) return "The Sun is down.";
   const days = Math.round((setAt * TRACK_STEP_MIN) / (60 * 24));
   const count = Math.max(1, days);
   const unit = count === 1 ? "day" : "days";
