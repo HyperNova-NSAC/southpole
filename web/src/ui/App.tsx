@@ -175,6 +175,15 @@ export function App() {
 
   return (
     <div className="app">
+      <header className="app-nav">
+        <a className="app-brand" href="/">
+          <img src="/favicon.svg" alt="" width={26} height={26} />
+          Lunar Skyline
+        </a>
+        <a className="app-nav-link" href="/">
+          Home
+        </a>
+      </header>
       <main className="content">
         <div className="top-grid">
           <LocationCard

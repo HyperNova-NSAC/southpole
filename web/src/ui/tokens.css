@@ -1,75 +1,41 @@
 /* ==========================================================================
-   Lunar Skyline — Apple-style design tokens and components.
-   Light and dark themes follow the system setting.
+   Lunar Skyline tool. Same always-dark space theme as the home page.
    ========================================================================== */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
-  /* Surfaces */
-  --bg: #f5f5f7;
-  --card: #ffffff;
-  --fill: rgba(118, 118, 128, 0.12);
-  --fill-strong: rgba(118, 118, 128, 0.2);
-  --separator: rgba(60, 60, 67, 0.14);
-  --nav: rgba(245, 245, 247, 0.72);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 28px rgba(0, 0, 0, 0.06);
+  --bg: #000000;
+  --card: #0c0c0e;
+  --fill: rgba(255, 255, 255, 0.06);
+  --fill-strong: rgba(255, 255, 255, 0.12);
+  --separator: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.1);
+  --nav: rgba(0, 0, 0, 0.72);
+  --shadow: none;
 
-  /* Text */
-  --text: #1d1d1f;
-  --text-2: rgba(60, 60, 67, 0.72);
-  --text-3: rgba(60, 60, 67, 0.45);
+  --text: #f5f5f7;
+  --text-2: rgba(235, 235, 245, 0.68);
+  --text-3: rgba(235, 235, 245, 0.4);
 
-  /* System colours */
-  --blue: #007aff;
-  --green: #34c759;
-  --orange: #ff9500;
-  --red: #ff3b30;
-  --sun: #ff9f0a;
-  --earth: #0a84ff;
+  --blue: #ffb340;
+  --green: #30d158;
+  --orange: #ffb340;
+  --red: #ff453a;
+  --sun: #ffb340;
+  --earth: #8eb6ff;
 
-  /* Chart */
-  --sky-top: #e9eefb;
-  --sky-bottom: #f7f8fc;
-  --ground-top: #b9b9c0;
-  --ground-bottom: #dedee3;
-  --ridge: #6e6e73;
-  --grid: rgba(60, 60, 67, 0.12);
+  --sky-top: #10131c;
+  --sky-bottom: #05060a;
+  --ground-top: #3a3a40;
+  --ground-bottom: #121214;
+  --ridge: #c7c7cc;
+  --grid: rgba(235, 235, 245, 0.1);
 
-  --radius: 20px;
-  --radius-sm: 12px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter,
+  --radius: 22px;
+  --radius-sm: 14px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter,
     system-ui, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #000000;
-    --card: #1c1c1e;
-    --fill: rgba(118, 118, 128, 0.24);
-    --fill-strong: rgba(118, 118, 128, 0.36);
-    --separator: rgba(84, 84, 88, 0.6);
-    --nav: rgba(22, 22, 23, 0.72);
-    --shadow: none;
-
-    --text: #f5f5f7;
-    --text-2: rgba(235, 235, 245, 0.66);
-    --text-3: rgba(235, 235, 245, 0.36);
-
-    --blue: #0a84ff;
-    --green: #30d158;
-    --orange: #ff9f0a;
-    --red: #ff453a;
-    --sun: #ffb340;
-    --earth: #64a8ff;
-
-    --sky-top: #0b1020;
-    --sky-bottom: #151a2b;
-    --ground-top: #48484d;
-    --ground-bottom: #1f1f22;
-    --ridge: #a1a1a6;
-    --grid: rgba(235, 235, 245, 0.08);
-  }
 }
 
 /* ---------- Base ---------- */
@@ -102,12 +68,18 @@ select {
   color: inherit;
 }
 
+select option {
+  background: #111;
+  color: var(--text);
+}
+
 a {
-  color: var(--blue);
+  color: var(--sun);
   text-decoration: none;
 }
 
 a:hover {
+  color: #fff;
   text-decoration: underline;
 }
 
@@ -160,22 +132,60 @@ a:hover {
 }
 
 .segment.active {
-  background: var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-}
-
-@media (prefers-color-scheme: dark) {
-  .segment.active {
-    background: #636366;
-  }
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  box-shadow: none;
 }
 
 /* ---------- Layout ---------- */
 
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px clamp(20px, 4vw, 48px);
+  background: rgba(0, 0, 0, 0.72);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.app-brand:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.app-brand img {
+  border-radius: 7px;
+}
+
+.app-nav-link {
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.app-nav-link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
 .content {
-  max-width: 1200px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 24px 64px;
+  padding: 28px clamp(20px, 4vw, 48px) 72px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -209,9 +219,10 @@ a:hover {
 /* ---------- Cards ---------- */
 
 .card {
-  background: var(--card);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
   padding: 22px 24px;
 }
 
@@ -224,9 +235,9 @@ a:hover {
 }
 
 .card h2 {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
 }
 
 .card-subtitle {
@@ -251,12 +262,15 @@ a:hover {
 }
 
 .button.primary {
-  background: var(--blue);
-  color: #fff;
+  border-radius: 999px;
+  background: #f5f5f7;
+  color: #000;
+  box-shadow: 0 10px 40px rgba(255, 179, 64, 0.16);
 }
 
 .button.primary:hover {
-  filter: brightness(1.08);
+  background: #fff;
+  filter: none;
 }
 
 .button:disabled {
@@ -333,7 +347,7 @@ a:hover {
   border: 0;
   margin-right: -4px;
   background: transparent
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23007aff' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffb340' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
     no-repeat right 2px center;
   color: var(--blue);
   padding: 8px 16px 8px 8px;
@@ -347,7 +361,7 @@ a:hover {
   appearance: none;
   border: 0;
   background: var(--fill)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23007aff' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffb340' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
     no-repeat right 10px center;
   color: var(--blue);
   padding: 6px 28px 6px 12px;
@@ -841,8 +855,8 @@ a:hover {
   height: 40px;
   border: 0;
   border-radius: 50%;
-  background: var(--blue);
-  color: #fff;
+  background: #f5f5f7;
+  color: #000;
   font-size: 13px;
   cursor: pointer;
 }
@@ -950,10 +964,11 @@ a:hover {
 
 .dialog {
   max-width: 560px;
-  background: var(--card);
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.96), rgba(12, 12, 14, 0.96));
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 24px 26px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -975,9 +990,9 @@ a:hover {
   align-self: flex-end;
   border: 0;
   border-radius: 999px;
-  background: var(--blue);
-  color: #fff;
+  background: #f5f5f7;
+  color: #000;
   padding: 8px 18px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
