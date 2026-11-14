@@ -7,6 +7,7 @@ import { fixture } from "./fixture";
 import { Header } from "./Header";
 import { MissionBars } from "./MissionBars";
 import { SiteDateBar } from "./SiteDateBar";
+import { Skyline } from "./Skyline";
 import { SourceFooter } from "./SourceFooter";
 import { VerdictBanner } from "./VerdictBanner";
 
@@ -35,6 +36,14 @@ export function App() {
         <p>Loading places…</p>
       )}
       <VerdictBanner sentence={fixture.sentence} />
+      <Skyline
+        maskElDeg={fixture.maskElDeg}
+        sun={fixture.sun}
+        earth={fixture.earth}
+        sunTrack={fixture.sunTrack}
+        earthTrack={fixture.earthTrack}
+        summary={`${fixture.sunset}. ${fixture.earthset}.`}
+      />
       <CountdownRow sunset={fixture.sunset} earthset={fixture.earthset} />
       <MissionBars powerFraction={fixture.powerFraction} earthFraction={fixture.earthFraction} />
       <CompareRow sentence={fixture.comparison} />
