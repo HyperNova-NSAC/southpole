@@ -3,18 +3,7 @@ import { scaleLinear } from "d3-scale";
 import { areaRadial, lineRadial } from "d3-shape";
 import type { Instant } from "../../contract/types";
 import { Marker } from "./HorizonPanorama";
-import {
-  clipTrackToWindow,
-  compassLabel,
-  discRadiusPx,
-  elevationDomain,
-  holdAtBoundary,
-  nearestIndex,
-  polarPoint,
-  pxPerDeg,
-  splitTrack,
-  type TrackPoint,
-} from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, polarPoint, pxPerDeg, splitTrack, type TrackPoint } from "./geometry";
 import { earthTrack, sunTrack } from "./tracks";
 import { useElementWidth } from "./useElementWidth";
 
@@ -38,19 +27,13 @@ export function SkyDome({ mask, samples, playhead, height = 440 }: SkyDomeProps)
 
   const sun = useMemo(() => sunTrack(samples), [samples]);
   const earth = useMemo(() => earthTrack(samples), [samples]);
+  const sunRuns = useMemo(() => splitTrack(sun, false), [sun]);
+  const earthRuns = useMemo(() => splitTrack(earth, false), [earth]);
 
   const radius = Math.max(0, Math.min(width, height) / 2 - 34);
   const [low, high] = elevationDomain(mask, [sun, earth]);
-  const sunRuns = useMemo(
-    () => clipTrackToWindow(sun, low, high).flatMap((run) => splitTrack(run, false)),
-    [sun, low, high],
-  );
-  const earthRuns = useMemo(
-    () => clipTrackToWindow(earth, low, high).flatMap((run) => splitTrack(run, false)),
-    [earth, low, high],
-  );
   // Elevation maps to distance from the centre: the top of the range sits at the centre.
-  const r = scaleLinear().domain([high, low]).range([0, radius]);
+  const r = scaleLinear().domain([high, low]).range([0, radius]).clamp(true);
 
   const ring = mask.length > 0 ? [...mask, mask[0]] : [];
   const terrainPath =
@@ -64,14 +47,6 @@ export function SkyDome({ mask, samples, playhead, height = 440 }: SkyDomeProps)
 
   const at = (azDeg: number, elDeg: number) => polarPoint(azDeg, r(elDeg));
   const scale = pxPerDeg(Math.abs(r(low) - r(high)), high - low);
-  const playIndex = playhead
-    ? nearestIndex(
-        samples.map((sample) => Date.parse(sample.t)),
-        Date.parse(playhead.t),
-      )
-    : 0;
-  const sunAt = holdAtBoundary(sun, playIndex, low, high);
-  const earthAt = holdAtBoundary(earth, playIndex, low, high);
 
   return (
     <div ref={containerRef} className="chart">
@@ -128,14 +103,14 @@ export function SkyDome({ mask, samples, playhead, height = 440 }: SkyDomeProps)
             {playhead ? (
               <>
                 <Marker
-                  {...at(earthAt.azDeg, earthAt.elDeg)}
+                  {...at(playhead.earthAzDeg, playhead.earthElDeg)}
                   kind="earth"
                   visible={playhead.earthVisible}
                   label="Earth"
                   radius={discRadiusPx(scale, playhead.earthAngDiamDeg)}
                 />
                 <Marker
-                  {...at(sunAt.azDeg, sunAt.elDeg)}
+                  {...at(playhead.sunAzDeg, playhead.sunElDeg)}
                   kind="sun"
                   visible={playhead.sunFrac >= 0.5}
                   label="Sun"

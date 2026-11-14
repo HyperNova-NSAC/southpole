@@ -1,16 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  clipTrackToWindow,
-  compassLabel,
-  discRadiusPx,
-  elevationDomain,
-  holdAtBoundary,
-  nearestIndex,
-  pxPerDeg,
-  runsWhere,
-  splitTrack,
-  timelineDomain,
-} from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, nearestIndex, pxPerDeg, runsWhere, splitTrack, timelineDomain } from "./geometry";
 
 const p = (azDeg: number, on: boolean) => ({ azDeg, elDeg: 1, on });
 
@@ -80,61 +69,6 @@ describe("discRadiusPx", () => {
     expect(sun).toBeCloseTo(5.4);
     expect(earth).toBeCloseTo(19);
     expect(earth / sun).toBeCloseTo(1.9 / 0.54);
-  });
-});
-
-describe("holdAtBoundary", () => {
-  const track = [
-    { azDeg: 10, elDeg: 20 },
-    { azDeg: 30, elDeg: 5 },
-    { azDeg: 50, elDeg: -40 },
-    { azDeg: 120, elDeg: -60 },
-  ];
-
-  it("follows the body while it is inside the window", () => {
-    expect(holdAtBoundary(track, 1, -3, 30)).toEqual({ azDeg: 30, elDeg: 5 });
-  });
-
-  it("stays at the exit crossing instead of sliding along the edge", () => {
-    const exit = holdAtBoundary(track, 2, -3, 30);
-    const later = holdAtBoundary(track, 3, -3, 30);
-    expect(exit.elDeg).toBe(-3);
-    expect(exit.azDeg).toBeGreaterThan(30);
-    expect(exit.azDeg).toBeLessThan(50);
-    expect(later).toEqual(exit);
-  });
-
-  it("crosses the 0° seam the short way", () => {
-    const wrapped = holdAtBoundary(
-      [
-        { azDeg: 350, elDeg: 10 },
-        { azDeg: 10, elDeg: -20 },
-      ],
-      1,
-      0,
-      20,
-    );
-    expect(wrapped.elDeg).toBe(0);
-    expect(wrapped.azDeg).toBeGreaterThan(350);
-  });
-});
-
-describe("clipTrackToWindow", () => {
-  it("ends a path at the boundary and starts again on re-entry", () => {
-    const runs = clipTrackToWindow(
-      [
-        { azDeg: 0, elDeg: 10, on: true },
-        { azDeg: 20, elDeg: -30, on: true },
-        { azDeg: 40, elDeg: 8, on: false },
-      ],
-      0,
-      20,
-    );
-    expect(runs).toHaveLength(2);
-    expect(runs[0][runs[0].length - 1].elDeg).toBe(0);
-    expect(runs[1][0].elDeg).toBe(0);
-    expect(runs[1][0].azDeg).toBeGreaterThan(20);
-    expect(runs[1][0].azDeg).toBeLessThan(40);
   });
 });
 
