@@ -35,6 +35,14 @@ input {
   padding: 0.35rem 0.6rem;
 }
 
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--sun);
+  outline-offset: 2px;
+}
+
 button {
   cursor: pointer;
 }
@@ -85,9 +93,9 @@ a {
   line-height: 1.25;
 }
 
-.countdown span,
-.bars span {
-  color: var(--muted);
+.countdown,
+.bars {
+  color: var(--text);
 }
 
 .meter {
