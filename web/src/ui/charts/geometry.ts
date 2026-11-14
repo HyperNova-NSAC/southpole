@@ -125,3 +125,103 @@ export function polarPoint(azDeg: number, radius: number): { x: number; y: numbe
   const a = (azDeg * Math.PI) / 180;
   return { x: Math.sin(a) * radius, y: -Math.cos(a) * radius };
 }
+
+function elevationBounds(a: number, b: number): [number, number] {
+  return a <= b ? [a, b] : [b, a];
+}
+
+function elevationInside(elDeg: number, elMin: number, elMax: number): boolean {
+  return elDeg >= elMin && elDeg <= elMax;
+}
+
+/** Shortest-way azimuth blend. `t` is 0 at `from` and 1 at `to`. */
+function lerpAzimuth(from: number, to: number, t: number): number {
+  const wrapped = (((to - from) % 360) + 360) % 360;
+  const delta = wrapped > 180 ? wrapped - 360 : wrapped;
+  return (from + delta * t + 360) % 360;
+}
+
+/**
+ * Where the segment between an inside sample and an outside sample crosses
+ * the elevation window. Azimuth follows the short way around the circle.
+ */
+function boundaryCrossing(
+  a: { azDeg: number; elDeg: number; on?: boolean },
+  b: { azDeg: number; elDeg: number; on?: boolean },
+  elMin: number,
+  elMax: number,
+): TrackPoint {
+  const outside = elevationInside(a.elDeg, elMin, elMax) ? b : a;
+  const inside = outside === a ? b : a;
+  const boundary = outside.elDeg > elMax ? elMax : elMin;
+  const span = b.elDeg - a.elDeg;
+  const t = span === 0 ? 0 : (boundary - a.elDeg) / span;
+  const u = Math.min(1, Math.max(0, t));
+  return {
+    azDeg: lerpAzimuth(a.azDeg, b.azDeg, u),
+    elDeg: boundary,
+    on: inside.on ?? false,
+  };
+}
+
+/**
+ * Pieces of a Sun or Earth track that stay inside the chart's elevation window.
+ * Each exit and re-entry is cut exactly at the boundary, so the path does not
+ * run along the edge while the body is outside the window.
+ */
+export function clipTrackToWindow(points: TrackPoint[], elLow: number, elHigh: number): TrackPoint[][] {
+  const [elMin, elMax] = elevationBounds(elLow, elHigh);
+  const runs: TrackPoint[][] = [];
+  let run: TrackPoint[] | null = null;
+  for (let i = 0; i < points.length; i += 1) {
+    const point = points[i];
+    const prev = points[i - 1];
+    const now = elevationInside(point.elDeg, elMin, elMax);
+    const was = prev !== undefined && elevationInside(prev.elDeg, elMin, elMax);
+    if (prev !== undefined && was !== now) {
+      const edge = boundaryCrossing(prev, point, elMin, elMax);
+      if (was && run) {
+        run.push(edge);
+        run = null;
+      } else {
+        run = [edge, point];
+        runs.push(run);
+      }
+    } else if (now) {
+      if (run === null) {
+        run = [point];
+        runs.push(run);
+      } else {
+        run.push(point);
+      }
+    }
+  }
+  return runs;
+}
+
+/**
+ * Marker position for one body. Inside the elevation window this is the
+ * playhead sample. Once it has left, it stays where it crossed the boundary
+ * instead of sliding along the edge as its azimuth keeps changing.
+ */
+export function holdAtBoundary(
+  points: { azDeg: number; elDeg: number }[],
+  index: number,
+  elLow: number,
+  elHigh: number,
+): { azDeg: number; elDeg: number } {
+  const [elMin, elMax] = elevationBounds(elLow, elHigh);
+  if (points.length === 0) return { azDeg: 0, elDeg: elMin };
+  const i = Math.max(0, Math.min(points.length - 1, index));
+  const current = points[i];
+  if (elevationInside(current.elDeg, elMin, elMax)) return current;
+
+  for (let j = i - 1; j >= 0; j -= 1) {
+    if (!elevationInside(points[j].elDeg, elMin, elMax)) continue;
+    const edge = boundaryCrossing(points[j], points[j + 1], elMin, elMax);
+    return { azDeg: edge.azDeg, elDeg: edge.elDeg };
+  }
+
+  const first = points[0];
+  return { azDeg: first.azDeg, elDeg: Math.min(elMax, Math.max(elMin, first.elDeg)) };
+}

@@ -3,7 +3,17 @@ import type { PointerEvent } from "react";
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
 import type { Instant } from "../../contract/types";
-import { compassLabel, discRadiusPx, elevationDomain, pxPerDeg, splitTrack, type TrackPoint } from "./geometry";
+import {
+  clipTrackToWindow,
+  compassLabel,
+  discRadiusPx,
+  elevationDomain,
+  holdAtBoundary,
+  nearestIndex,
+  pxPerDeg,
+  splitTrack,
+  type TrackPoint,
+} from "./geometry";
 import { earthTrack, sunTrack } from "./tracks";
 import { useElementWidth } from "./useElementWidth";
 
@@ -32,11 +42,18 @@ export function HorizonPanorama({ mask, samples, playhead, height = 440 }: Horiz
 
   const sun = useMemo(() => sunTrack(samples), [samples]);
   const earth = useMemo(() => earthTrack(samples), [samples]);
-  const sunRuns = useMemo(() => splitTrack(sun, true), [sun]);
-  const earthRuns = useMemo(() => splitTrack(earth, true), [earth]);
 
   const x = scaleLinear().domain([0, 360]).range([0, innerW]);
   const y = scaleLinear().domain(elevationDomain(mask, [sun, earth])).range([innerH, 0]).nice();
+  const [elMin, elMax] = y.domain();
+  const sunRuns = useMemo(
+    () => clipTrackToWindow(sun, elMin, elMax).flatMap((run) => splitTrack(run, true)),
+    [sun, elMin, elMax],
+  );
+  const earthRuns = useMemo(
+    () => clipTrackToWindow(earth, elMin, elMax).flatMap((run) => splitTrack(run, true)),
+    [earth, elMin, elMax],
+  );
 
   // Repeat azimuth 0 at 360 so the silhouette spans the full width.
   const ring = mask.length > 0 ? [...mask, mask[0]] : [];
@@ -61,11 +78,19 @@ export function HorizonPanorama({ mask, samples, playhead, height = 440 }: Horiz
     setHoverAz(px >= 0 && px <= innerW ? Math.round(x.invert(px)) % 360 : null);
   }
 
-  const clampToPlot = (px: number, py: number) => {
-    const cx = Math.max(0, Math.min(innerW, px));
-    const anchor = cx < 24 ? "start" : cx > innerW - 24 ? "end" : "middle";
-    return { x: cx, y: Math.max(0, Math.min(innerH, py)), anchor } as const;
+  const playIndex = playhead
+    ? nearestIndex(
+        samples.map((sample) => Date.parse(sample.t)),
+        Date.parse(playhead.t),
+      )
+    : 0;
+  const place = (azDeg: number, elDeg: number) => {
+    const px = x(azDeg);
+    const anchor = px < 24 ? "start" : px > innerW - 24 ? "end" : "middle";
+    return { x: px, y: y(elDeg), anchor } as const;
   };
+  const sunAt = holdAtBoundary(sun, playIndex, elMin, elMax);
+  const earthAt = holdAtBoundary(earth, playIndex, elMin, elMax);
 
   const hoverRidge = hoverAz === null ? undefined : mask[hoverAz];
   // Disc sizes are read off the elevation axis, which is the one compared to the skyline.
@@ -136,14 +161,14 @@ export function HorizonPanorama({ mask, samples, playhead, height = 440 }: Horiz
             {playhead ? (
               <>
                 <Marker
-                  {...clampToPlot(x(playhead.earthAzDeg), y(playhead.earthElDeg))}
+                  {...place(earthAt.azDeg, earthAt.elDeg)}
                   kind="earth"
                   visible={playhead.earthVisible}
                   label="Earth"
                   radius={discRadiusPx(scale, playhead.earthAngDiamDeg)}
                 />
                 <Marker
-                  {...clampToPlot(x(playhead.sunAzDeg), y(playhead.sunElDeg))}
+                  {...place(sunAt.azDeg, sunAt.elDeg)}
                   kind="sun"
                   visible={playhead.sunFrac >= 0.5}
                   label="Sun"
