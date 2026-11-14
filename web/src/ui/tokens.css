@@ -1,0 +1,126 @@
+:root {
+  --bg: #101410;
+  --text: #f3f0e8;
+  --muted: #b7b1a6;
+  --sun: #e0a23a;
+  --earth: #3c7ebf;
+  --ok: #2f7d4a;
+  --warn: #b8860b;
+  --bad: #a33b3b;
+  --line: #2a312c;
+  color: var(--text);
+  background: var(--bg);
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--earth);
+}
+
+.app {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.header,
+.site-date,
+.countdown,
+.bars,
+.compare,
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: baseline;
+}
+
+.header {
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.wordmark {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.verdict {
+  border-left: 6px solid var(--ok);
+  padding: 0.25rem 0 0.25rem 1rem;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.verdict h1 {
+  font-size: 28px;
+  font-weight: 560;
+  max-width: 38rem;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.countdown span,
+.bars span {
+  color: var(--muted);
+}
+
+.meter {
+  width: 8rem;
+  height: 0.55rem;
+  background: var(--line);
+  border-radius: 99px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+}
+
+.meter.power i {
+  background: var(--sun);
+}
+
+.meter.earth i {
+  background: var(--earth);
+}
+
+.footer {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.footer p {
+  flex-basis: 100%;
+  margin: 0;
+}

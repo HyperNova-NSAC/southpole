@@ -1,0 +1,5 @@
+{
+  "quickmap": "https://quickmap.lroc.im-ldi.com/?prjExtent={west},{south},{east},{north}&proj=27&lat={lat}&lon={lon}",
+  "moontrek": "https://trek.nasa.gov/moon/#v=0.1&x={lon}&y={lat}&z={zoom}&p=urn:ogc:def:crs:EPSG::104903&d=&b=moon&e={westDeg},{southDeg},{eastDeg},{northDeg}&sfz=&w=",
+  "credit": "Sun and Earth positions come from NASA JPL Horizons. The south-pole elevation model is the LOLA LDEM_80S_80MPP_ADJ GeoTIFF from NASA GSFC's Planetary Geodesy Data Archive, in the Moon Mean Earth frame. Imagery links open Lunar QuickMap (quickmap.lroc.im-ldi.com), a collaboration between NASA, Intuitive Machines, and Applied Coherent Technology. Moon Trek is NASA's lunar visualization tool. Canadian mission context includes the Canadian Space Agency's Canadarm3 page."
+}

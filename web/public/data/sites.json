@@ -1,0 +1,48 @@
+{
+  "sites": [
+    {
+      "id": "shackleton-rim",
+      "name": "Shackleton rim",
+      "latDeg": -89.9,
+      "lonDegEast": 0.0,
+      "heightM": 0,
+      "category": "polar",
+      "agency": "NASA",
+      "notes": "Older IAU point (0 E, 89.9 S). Opening this point in QuickMap's south-polar stereographic view frames Shackleton crater. The south pole lies on the rim; the current crater center is the floor site.",
+      "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/5450"
+    },
+    {
+      "id": "nobile-rim-1",
+      "name": "Nobile Rim 1",
+      "latDeg": -85.44,
+      "lonDegEast": 37.37,
+      "heightM": 0,
+      "category": "artemis",
+      "agency": "NASA",
+      "notes": "Region center quoted from NASA's Lunar Surface Data Book (85.44 S, 37.37 E). Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"
+    },
+    {
+      "id": "shackleton-floor",
+      "name": "Shackleton floor",
+      "latDeg": -89.67,
+      "lonDegEast": 129.78,
+      "heightM": 0,
+      "category": "polar",
+      "agency": "IAU",
+      "notes": "Current IAU center of Shackleton crater, used as the dark floor counter-example. Confirm the pin in QuickMap before the demo.",
+      "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/5450"
+    },
+    {
+      "id": "apollo-11",
+      "name": "Apollo 11",
+      "latDeg": 0.67408,
+      "lonDegEast": 23.47297,
+      "heightM": 0,
+      "category": "apollo",
+      "agency": "NASA",
+      "notes": "Tranquility Base. Equatorial contrast site.",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-059C"
+    }
+  ]
+}

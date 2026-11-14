@@ -1,0 +1,20 @@
+{
+  "profiles": [
+    {
+      "id": "small-lander",
+      "label": "Small lander, 14 days",
+      "durationHours": 336,
+      "earthRequiredAtLanding": true,
+      "maxLongestDarkHours": 50,
+      "illustrative": true
+    },
+    {
+      "id": "long-stay",
+      "label": "Long stay, 100 days",
+      "durationHours": 2400,
+      "earthRequiredAtLanding": false,
+      "maxLongestDarkHours": 100,
+      "illustrative": true
+    }
+  ]
+}
