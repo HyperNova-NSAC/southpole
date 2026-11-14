@@ -4,7 +4,7 @@ import { scaleLinear, scaleUtc } from "d3-scale";
 import { line } from "d3-shape";
 import type { Instant } from "../../contract/types";
 import { SUNLIT_THRESHOLD } from "../../core/evaluate";
-import { nearestIndex, runsWhere } from "./geometry";
+import { nearestIndex, runsWhere, timelineDomain } from "./geometry";
 import { useElementWidth } from "./useElementWidth";
 
 type MissionTimelineProps = {
@@ -50,11 +50,8 @@ function TimelinePlot({ samples, playheadUtc, onSeek, width }: MissionTimelinePr
   const end = times[times.length - 1] + STEP_MS;
   const x = scaleUtc().domain([start, end]).range([0, innerW]);
 
-  // Clearances can swing far below the skyline; keep the interesting band around 0°.
   const clearances = samples.flatMap((s) => [s.sunClearanceDeg, s.earthClearanceDeg]);
-  const low = Math.max(-15, Math.min(-3, ...clearances));
-  const high = Math.min(40, Math.max(3, ...clearances));
-  const y = scaleLinear().domain([low, high]).range([CHART_H, 0]).nice();
+  const y = scaleLinear().domain(timelineDomain(clearances)).range([CHART_H, 0]).nice();
 
   const clearanceLine = (pick: (s: Instant) => number) =>
     line<Instant>()

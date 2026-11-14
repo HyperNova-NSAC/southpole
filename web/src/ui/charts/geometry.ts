@@ -59,6 +59,20 @@ export function elevationDomain(
   return [Math.floor(low - 1), Math.min(90, Math.ceil(high + 1))];
 }
 
+/**
+ * Y range for the mission timeline, in degrees of clearance above the skyline.
+ * Values far below the skyline stay clamped so a deep night does not flatten
+ * the chart. The top follows the highest Sun or Earth clearance.
+ */
+export function timelineDomain(clearances: number[]): [number, number] {
+  if (clearances.length === 0) return [-3, 3];
+  const floor = Math.min(...clearances);
+  const peak = Math.max(...clearances);
+  const low = Math.max(-15, Math.min(-3, floor));
+  const high = Math.max(3, peak + 2);
+  return [low, high];
+}
+
 /** Index ranges [start, end) where `flags` is true, for drawing timeline bands. */
 export function runsWhere(flags: boolean[]): { start: number; end: number }[] {
   const runs: { start: number; end: number }[] = [];
