@@ -1,10 +1,12 @@
 type MissionBarsProps = {
   powerFraction: number;
   earthFraction: number;
+  durationHours: number;
 };
 
-export function MissionBars({ powerFraction, earthFraction }: MissionBarsProps) {
-  const sunlitDays = Math.round(powerFraction * 14);
+export function MissionBars({ powerFraction, earthFraction, durationHours }: MissionBarsProps) {
+  const days = Math.max(1, Math.round(durationHours / 24));
+  const sunlitDays = Math.round(powerFraction * days);
   const earthPercent = Math.round(earthFraction * 100);
 
   return (
@@ -14,7 +16,9 @@ export function MissionBars({ powerFraction, earthFraction }: MissionBarsProps) 
         <span className="meter power" aria-hidden="true">
           <i style={{ width: `${powerFraction * 100}%` }} />
         </span>
-        <span className="readout-value">{sunlitDays} of 14 days</span>
+        <span className="readout-value">
+          {sunlitDays} of {days} days
+        </span>
       </div>
       <div className="readout">
         <span className="readout-label">Talk to Earth</span>

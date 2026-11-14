@@ -5,6 +5,16 @@ function toMs(t: string): number {
   return Date.parse(t);
 }
 
+const timeCache = new WeakMap<HorizonsTable, number[]>();
+
+function sampleTimes(table: HorizonsTable): number[] {
+  const cached = timeCache.get(table);
+  if (cached) return cached;
+  const times = table.samples.map((sample) => toMs(sample.t));
+  timeCache.set(table, times);
+  return times;
+}
+
 // Format epoch milliseconds back into an ISO-8601 UTC timestamp string.
 function toIso(tMs: number): string {
   const d = new Date(tMs);
@@ -22,7 +32,7 @@ function toIso(tMs: number): string {
  * quantities interpolate linearly. Times outside the table clamp to an end sample.
  */
 export function sampleAt(table: HorizonsTable, tMs: number): HorizonsSample {
-  const times = table.samples.map((sample) => toMs(sample.t));
+  const times = sampleTimes(table);
   const first = times[0];
   const last = times[times.length - 1];
   const clamped = Math.min(Math.max(tMs, first), last);
@@ -38,11 +48,13 @@ export function sampleAt(table: HorizonsTable, tMs: number): HorizonsSample {
     return table.samples[table.samples.length - 1];
   }
 
-  let hi = 1;
-  while (hi < times.length - 1 && times[hi] <= clamped) {
-    hi += 1;
+  let lo = 0;
+  let hi = times.length - 1;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= clamped) lo = mid;
+    else hi = mid;
   }
-  const lo = hi - 1;
   const t0 = times[lo];
   const t1 = times[hi];
   const span = t1 - t0;
