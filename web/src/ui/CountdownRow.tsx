@@ -6,8 +6,8 @@ type CountdownRowProps = {
 export function CountdownRow({ sunset, earthset }: CountdownRowProps) {
   return (
     <div className="countdown">
-      <span>{sunset}</span>
-      <span>{earthset}</span>
+      <p>{sunset}</p>
+      <p>{earthset}</p>
     </div>
   );
 }
