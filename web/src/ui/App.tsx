@@ -1,29 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { linksSchema, profilesFileSchema, sitesFileSchema } from "../contract/schemas";
 import type { HorizonMask, Instant, Links, MissionProfile, Site, Verdict, WindowMetrics } from "../contract/types";
-import { compare } from "../core/compare";
-import { EARTH_COMM_MARGIN_DEG, SUNLIT_THRESHOLD, evaluateMission } from "../core/evaluate";
-import { betterSite, type SlipIndex } from "../core/slip";
+import { EARTH_COMM_MARGIN_DEG, evaluateMission } from "../core/evaluate";
+import type { SlipIndex } from "../core/slip";
 import { buildVerdict } from "../core/verdict";
 import { useAppStore } from "../state/store";
 import tourFile from "../../../content/tour.json";
 import { AboutDialog } from "./AboutDialog";
-import { CompareRow } from "./CompareRow";
-import { CountdownRow } from "./CountdownRow";
-import { DetailsDrawer } from "./DetailsDrawer";
-import { Header } from "./Header";
-import { MissionBars } from "./MissionBars";
-import { SiteDateBar } from "./SiteDateBar";
-import { Skyline } from "./Skyline";
+import { MissionTimeline } from "./charts/MissionTimeline";
+import { nearestIndex } from "./charts/geometry";
+import { HORIZONS_LOADING, loadMissionData } from "./loadMission";
+import { LocationCard } from "./LocationCard";
+import { customSiteFromCoords, matchCatalogSite } from "./matchSite";
+import { indexFromTables, rememberIndex, suggestDates } from "./missionIndex";
+import { NavBar } from "./NavBar";
+import { CUSTOM_SITE_ID, searchFromSelection } from "./query";
+import { ResultCard } from "./ResultCard";
+import { summarize } from "./result";
+import { SkyCard } from "./SkyCard";
 import { SourceFooter } from "./SourceFooter";
 import { TourCaption } from "./TourCaption";
-import { VerdictBanner } from "./VerdictBanner";
-import { HORIZONS_FAILURE, loadMissionData } from "./loadMission";
-import { cachedIndex, indexFromTables, rememberIndex, suggestDates } from "./missionIndex";
-import { earthsetLine, instantAt, playheadCaption, sunsetLine } from "./present";
-import { searchFromSelection } from "./query";
 
+/** Everything derived from one evaluated landing. */
 type MissionView = {
+  siteId: string;
   samples: Instant[];
   metrics: WindowMetrics;
   verdict: Verdict;
@@ -32,41 +32,37 @@ type MissionView = {
   index: SlipIndex;
 };
 
-const EMPTY_SUN = { azDeg: 0, elDeg: 0, angDiamDeg: 0.5, frac: 0 };
 const tourSteps = tourFile.steps;
+const PLAYBACK_INTERVAL_MS = 70;
 
 export function App() {
   const [sites, setSites] = useState<Site[]>([]);
   const [profiles, setProfiles] = useState<MissionProfile[]>([]);
   const [links, setLinks] = useState<Links | null>(null);
   const [mission, setMission] = useState<MissionView | null>(null);
-  const [comparison, setComparison] = useState("");
-  const [suggestion, setSuggestion] = useState<{ siteId: string; sentence: string } | null>(null);
-  const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "ready">("idle");
 
   const siteId = useAppStore((state) => state.siteId);
   const landingUtc = useAppStore((state) => state.landingUtc);
   const profileId = useAppStore((state) => state.profileId);
-  const compareSiteId = useAppStore((state) => state.compareSiteId);
   const customSite = useAppStore((state) => state.customSite);
   const playheadUtc = useAppStore((state) => state.playheadUtc);
   const playing = useAppStore((state) => state.playing);
-  const detailsOpen = useAppStore((state) => state.detailsOpen);
   const tourStep = useAppStore((state) => state.tourStep);
   const aboutOpen = useAppStore((state) => state.aboutOpen);
   const status = useAppStore((state) => state.status);
   const errorMessage = useAppStore((state) => state.errorMessage);
-  const setSiteId = useAppStore((state) => state.setSiteId);
-  const setLandingDate = useAppStore((state) => state.setLandingDate);
-  const setLandingUtc = useAppStore((state) => state.setLandingUtc);
-  const setProfileId = useAppStore((state) => state.setProfileId);
-  const setCompareSiteId = useAppStore((state) => state.setCompareSiteId);
-  const setCustomSite = useAppStore((state) => state.setCustomSite);
-  const setPlaying = useAppStore((state) => state.setPlaying);
-  const setDetailsOpen = useAppStore((state) => state.setDetailsOpen);
-  const setTourStep = useAppStore((state) => state.setTourStep);
-  const setAboutOpen = useAppStore((state) => state.setAboutOpen);
+  const {
+    setSiteId,
+    setLandingUtc,
+    setProfileId,
+    setCustomSite,
+    setPlayheadUtc,
+    setPlaying,
+    setTourStep,
+    setAboutOpen,
+  } = useAppStore.getState();
 
+  // Static catalog, mission profiles and outbound links.
   useEffect(() => {
     void Promise.all([
       fetch("/data/sites.json").then((response) => response.json()),
@@ -79,16 +75,33 @@ export function App() {
     });
   }, []);
 
-  const listed = customSite ? [...sites.filter((item) => item.id !== customSite.id), customSite] : sites;
-  const site = listed.find((item) => item.id === siteId) ?? null;
+  const site = useMemo(
+    () => (siteId === CUSTOM_SITE_ID ? customSite : sites.find((item) => item.id === siteId) ?? null),
+    [siteId, customSite, sites],
+  );
   const profile = profiles.find((item) => item.id === profileId) ?? null;
-  const compareOptions = listed.filter((item) => item.id !== site?.id);
-  const compareSite = compareOptions.find((item) => item.id === compareSiteId) ?? compareOptions[0] ?? null;
 
+  /** Typed coordinates snap to a catalog site within 2 km, otherwise become a custom site. */
+  function applyCoords(latDeg: number, lonDegEast: number) {
+    setTourStep(null);
+    const known = matchCatalogSite(sites, latDeg, lonDegEast);
+    if (known) {
+      if (known.id !== siteId) setSiteId(known.id);
+      return;
+    }
+    const custom = customSiteFromCoords(latDeg, lonDegEast);
+    if (site && custom.latDeg === site.latDeg && custom.lonDegEast === site.lonDegEast) return;
+    setCustomSite(custom);
+  }
+
+  // Fall back to the default site or profile when the URL names one we do not have.
   useEffect(() => {
     if (sites.length === 0) return;
-    const known = sites.some((item) => item.id === siteId) || siteId === customSite?.id;
-    if (!known) setSiteId("shackleton-rim");
+    if (siteId === CUSTOM_SITE_ID) {
+      if (!customSite) setSiteId("shackleton-rim");
+      return;
+    }
+    if (!sites.some((item) => item.id === siteId)) setSiteId("shackleton-rim");
   }, [sites, siteId, customSite, setSiteId]);
 
   useEffect(() => {
@@ -96,23 +109,20 @@ export function App() {
     if (!profiles.some((item) => item.id === profileId)) setProfileId(profiles[0].id);
   }, [profiles, profileId, setProfileId]);
 
+  // Mirror the selection into the URL so any result can be shared.
   useEffect(() => {
-    if (!compareSite || compareSite.id === compareSiteId) return;
-    setCompareSiteId(compareSite.id);
-  }, [compareSite, compareSiteId, setCompareSiteId]);
-
-  useEffect(() => {
+    const custom = siteId === CUSTOM_SITE_ID ? customSite : null;
     const next = searchFromSelection({
       siteId,
       landingUtc,
       profileId,
-      compareSiteId: compareSiteId ?? "nobile-rim-1",
+      latDeg: custom?.latDeg,
+      lonDegEast: custom?.lonDegEast,
     });
-    if (window.location.search !== next) {
-      window.history.replaceState(null, "", next);
-    }
-  }, [siteId, landingUtc, profileId, compareSiteId]);
+    if (window.location.search !== next) window.history.replaceState(null, "", next);
+  }, [siteId, landingUtc, profileId, customSite]);
 
+  // The guided tour drives the site and date.
   useEffect(() => {
     if (tourStep === null) return;
     const step = tourSteps[tourStep];
@@ -129,17 +139,16 @@ export function App() {
       const state = useAppStore.getState();
       if (state.aboutOpen) state.setAboutOpen(false);
       else if (state.tourStep !== null) state.setTourStep(null);
-      else if (state.detailsOpen) state.setDetailsOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Load ephemerides and terrain, then evaluate the landing.
   useEffect(() => {
     if (!site || !profile) return;
     let cancelled = false;
-    setMission(null);
-    setComparison("");
+    useAppStore.getState().setStatus("loading", HORIZONS_LOADING);
     void loadMissionData(site, landingUtc, profile.durationHours, fetch, (message) => {
       if (!cancelled) useAppStore.getState().setStatus("loading", message);
     }).then((result) => {
@@ -148,30 +157,17 @@ export function App() {
         useAppStore.getState().setStatus("error", result.message);
         return;
       }
-      const evaluated = evaluateMission(
-        result.files.sun,
-        result.files.earth,
-        result.files.mask,
-        landingUtc,
-        profile.durationHours,
-        EARTH_COMM_MARGIN_DEG,
-      );
+      const { sun, earth, mask, terrainNote } = result.files;
+      const evaluated = evaluateMission(sun, earth, mask, landingUtc, profile.durationHours, EARTH_COMM_MARGIN_DEG);
       const verdict = buildVerdict({
         metrics: evaluated.metrics,
         profile,
         landing: evaluated.samples[0],
         commMarginDeg: EARTH_COMM_MARGIN_DEG,
       });
-      const index = indexFromTables(site.id, result.files.sun, result.files.earth, result.files.mask);
+      const index = indexFromTables(site.id, sun, earth, mask);
       rememberIndex(index);
-      setMission({
-        samples: evaluated.samples,
-        metrics: evaluated.metrics,
-        verdict,
-        mask: result.files.mask,
-        terrainNote: result.files.terrainNote,
-        index,
-      });
+      setMission({ siteId: site.id, ...evaluated, verdict, mask, terrainNote, index });
       useAppStore.getState().setStatus("ready", null);
     });
     return () => {
@@ -180,222 +176,130 @@ export function App() {
   }, [site, profile, landingUtc]);
 
   useEffect(() => {
-    if (!compareSite || !profile || !mission || !site || mission.mask.siteId !== site.id) return;
-    let cancelled = false;
-    const currentMetrics = mission.metrics;
-    setComparison("Comparing this landing…");
-    void loadMissionData(compareSite, landingUtc, profile.durationHours).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        setComparison(HORIZONS_FAILURE);
-        return;
-      }
-      const evaluated = evaluateMission(
-        result.files.sun,
-        result.files.earth,
-        result.files.mask,
-        landingUtc,
-        profile.durationHours,
-        EARTH_COMM_MARGIN_DEG,
-      );
-      setComparison(compare(currentMetrics, evaluated.metrics, compareSite.name, profile.durationHours));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [compareSite, profile, landingUtc, mission, site]);
-
-  useEffect(() => {
-    if (!detailsOpen || !profile || sites.length === 0) return;
-    let cancelled = false;
-    setSuggestionStatus("loading");
-    void (async () => {
-      const indexes: Record<string, SlipIndex> = {};
-      await Promise.all(
-        sites.map(async (item) => {
-          const index = await cachedIndex(item);
-          if (index) indexes[item.id] = index;
-        }),
-      );
-      if (cancelled) return;
-      const names = Object.fromEntries(sites.map((item) => [item.id, item.name]));
-      setSuggestion(betterSite(indexes, siteId, landingUtc, profile, names));
-      setSuggestionStatus("ready");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [detailsOpen, sites, siteId, landingUtc, profile]);
-
-  useEffect(() => {
     if (!playing || !profile) return;
-    const timer = window.setInterval(() => {
-      useAppStore.getState().advancePlayhead(profile.durationHours);
-    }, 100);
+    const timer = window.setInterval(
+      () => useAppStore.getState().advancePlayhead(profile.durationHours),
+      PLAYBACK_INTERVAL_MS,
+    );
     return () => window.clearInterval(timer);
   }, [playing, profile]);
 
-  const landingDate = landingUtc.slice(0, 10);
-  const ready = status === "ready" && mission !== null;
-  const sentence = ready ? mission.verdict.sentence : (errorMessage ?? "Asking JPL Horizons…");
-  const sunset = ready ? sunsetLine(mission.metrics.sunsetInHours) : "";
-  const earthset = ready ? earthsetLine(mission.metrics.earthsetInHours) : "";
-  const playhead = ready ? instantAt(mission.samples, playheadUtc) : null;
-  const sunTrack = mission
-    ? mission.samples.map((sample) => ({
-        azDeg: sample.sunAzDeg,
-        elDeg: sample.sunElDeg,
-        lit: sample.sunFrac >= SUNLIT_THRESHOLD,
-      }))
-    : [];
-  const earthTrack = mission
-    ? mission.samples.map((sample) => ({
-        azDeg: sample.earthAzDeg,
-        elDeg: sample.earthElDeg,
-        visible: sample.earthVisible,
-      }))
-    : [];
+  const ready = status === "ready" && mission !== null && profile !== null;
+  const samples = mission?.samples ?? [];
+  const times = useMemo(() => samples.map((sample) => Date.parse(sample.t)), [samples]);
+  const playheadIndex = nearestIndex(times, Date.parse(playheadUtc));
+  const playhead = samples[playheadIndex] ?? null;
+
+  const summary = ready ? summarize(mission.verdict, mission.metrics, profile, mission.samples[0]) : null;
+  const nextLandings = ready ? suggestDates(mission.index, profile).filter((iso) => iso !== landingUtc) : [];
   const tour = tourStep === null ? null : tourSteps[tourStep];
-  const dates = ready && profile ? suggestDates(mission.index, profile) : [];
+
+  function chooseLanding(iso: string) {
+    setTourStep(null);
+    setLandingUtc(iso);
+  }
 
   return (
-    <main className="app">
-      <Header
+    <div className="app">
+      <NavBar
         profiles={profiles}
         profileId={profileId}
         onProfile={(id) => {
           setTourStep(null);
           setProfileId(id);
         }}
-        onWhy={() => setTourStep(0)}
+        onTour={() => setTourStep(0)}
         onAbout={() => setAboutOpen(true)}
       />
-      {tour ? (
-        <TourCaption
-          step={tourStep ?? 0}
-          total={tourSteps.length}
-          title={tour.title}
-          body={tour.body}
-          onBack={() => setTourStep(Math.max(0, (tourStep ?? 0) - 1))}
-          onNext={() => {
-            if (tourStep === null) return;
-            if (tourStep >= tourSteps.length - 1) setTourStep(null);
-            else setTourStep(tourStep + 1);
-          }}
-          onClose={() => setTourStep(null)}
-        />
-      ) : null}
-      {site ? (
-        <SiteDateBar
-          sites={listed}
-          siteId={site.id}
-          landingDate={landingDate}
-          onSite={(id) => {
-            setTourStep(null);
-            setSiteId(id);
-          }}
-          onDate={(date) => {
-            if (!date) return;
-            setTourStep(null);
-            setLandingDate(date);
-          }}
-        />
-      ) : (
-        <p>Loading places…</p>
-      )}
-      <VerdictBanner
-        sentence={sentence}
-        tone={ready ? mission.verdict.light : undefined}
-        note={ready ? mission.terrainNote : null}
-      />
-      <Skyline
-        maskElDeg={mission?.mask.maskElDeg ?? []}
-        sun={
-          playhead
-            ? {
-                azDeg: playhead.sunAzDeg,
-                elDeg: playhead.sunElDeg,
-                angDiamDeg: playhead.sunAngDiamDeg,
-                frac: playhead.sunFrac,
-              }
-            : EMPTY_SUN
-        }
-        earth={{
-          azDeg: playhead?.earthAzDeg ?? 0,
-          elDeg: playhead?.earthElDeg ?? 0,
-          angDiamDeg: playhead?.earthAngDiamDeg ?? 1.8,
-          visible: playhead?.earthVisible ?? false,
-          illumFrac: playhead?.earthIllumFrac ?? null,
-        }}
-        sunTrack={sunTrack}
-        earthTrack={earthTrack}
-        summary={ready ? `${sunset} ${earthset}` : sentence}
-      />
-      <CountdownRow
-        sunset={sunset}
-        earthset={earthset}
-        playing={playing}
-        caption={ready ? playheadCaption(playheadUtc) : ""}
-        onTogglePlay={() => setPlaying(!playing)}
-        playDisabled={!ready}
-      />
-      <MissionBars
-        powerFraction={ready ? mission.metrics.sunlitFraction : 0}
-        earthFraction={ready ? mission.metrics.earthFraction : 0}
-        durationHours={profile?.durationHours ?? 336}
-      />
-      {compareSite ? (
-        <CompareRow
-          sites={compareOptions}
-          compareSiteId={compareSite.id}
-          sentence={comparison}
-          onCompare={(id) => {
-            setTourStep(null);
-            setCompareSiteId(id);
-          }}
-        />
-      ) : null}
-      <button
-        type="button"
-        className="numbers-toggle"
-        aria-expanded={detailsOpen}
-        onClick={() => setDetailsOpen(!detailsOpen)}
-      >
-        {detailsOpen ? "Hide the numbers" : "Show the numbers"}
-      </button>
-      {links && site ? <SourceFooter links={links} lat={site.latDeg} lon={site.lonDegEast} compact /> : null}
-      {detailsOpen && links && site ? (
-        <DetailsDrawer
-          ready={ready}
-          playhead={playhead}
-          reasons={ready ? mission.verdict.reasons : []}
-          dates={dates}
-          suggestion={suggestion}
-          suggestionStatus={suggestionStatus}
-          links={links}
-          lat={site.latDeg}
-          lon={site.lonDegEast}
-          onLanding={(iso) => {
-            setTourStep(null);
-            setLandingUtc(iso);
-          }}
-          onCompare={setCompareSiteId}
-          onLookup={(lat, lon) => {
-            setCustomSite({
-              id: "custom",
-              name: `Custom ${lat.toFixed(2)}°, ${lon.toFixed(2)}° E`,
-              latDeg: lat,
-              lonDegEast: lon,
-              heightM: 0,
-              category: lat <= -60 ? "polar" : "apollo",
-              agency: "Typed",
-              notes: "Typed for this session. It is not saved in the catalog.",
-              sourceUrl: "",
-            });
-          }}
-        />
-      ) : null}
+
+      <main className="content">
+        <header className="page-header">
+          <h1>Can you land here?</h1>
+          <p>
+            Pick a point and a touchdown time. Lunar Skyline checks sunlight for power and line of sight to
+            Earth across the whole mission, using the real terrain around the site.
+          </p>
+        </header>
+
+        {tour && tourStep !== null ? (
+          <TourCaption
+            step={tourStep}
+            total={tourSteps.length}
+            title={tour.title}
+            body={tour.body}
+            onBack={() => setTourStep(Math.max(0, tourStep - 1))}
+            onNext={() => setTourStep(tourStep >= tourSteps.length - 1 ? null : tourStep + 1)}
+            onClose={() => setTourStep(null)}
+          />
+        ) : null}
+
+        <div className="top-grid">
+          <LocationCard
+            sites={sites}
+            site={site}
+            landingUtc={landingUtc}
+            onCoords={applyCoords}
+            onPreset={(id) => {
+              setTourStep(null);
+              setSiteId(id);
+            }}
+            onLanding={chooseLanding}
+          />
+          {ready && summary ? (
+            <ResultCard
+              state="ready"
+              summary={summary}
+              metrics={mission.metrics}
+              profile={profile}
+              nextLandings={nextLandings}
+              terrainNote={mission.terrainNote}
+              onLanding={chooseLanding}
+            />
+          ) : (
+            <ResultCard
+              state={status === "error" ? "error" : "loading"}
+              message={errorMessage ?? HORIZONS_LOADING}
+            />
+          )}
+        </div>
+
+        {mission ? (
+          <div className={ready ? "charts" : "charts stale"}>
+            <SkyCard
+              mask={mission.mask}
+              samples={mission.samples}
+              playhead={playhead}
+              playheadIndex={playheadIndex}
+              playing={playing}
+              onPlay={setPlaying}
+              onSeek={setPlayheadUtc}
+            />
+            <section className="card">
+              <div className="card-header">
+                <div>
+                  <h2>Mission timeline</h2>
+                  <p className="card-subtitle">
+                    Height of the Sun and Earth above the skyline. Shaded columns are nights. Click or drag to
+                    scrub.
+                  </p>
+                </div>
+              </div>
+              <MissionTimeline
+                samples={mission.samples}
+                playheadUtc={playheadUtc}
+                onSeek={(iso) => {
+                  setPlaying(false);
+                  setPlayheadUtc(iso);
+                }}
+              />
+            </section>
+          </div>
+        ) : null}
+
+        {links && site ? <SourceFooter links={links} lat={site.latDeg} lon={site.lonDegEast} /> : null}
+      </main>
+
       {aboutOpen && links ? <AboutDialog credit={links.credit} onClose={() => setAboutOpen(false)} /> : null}
-    </main>
+    </div>
   );
 }

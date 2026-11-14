@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Site } from "../contract/types";
+import { customSiteFromCoords } from "../ui/matchSite";
 import { selectionFromSearch } from "../ui/query";
 
 export type AppStatus = "ready" | "loading" | "error";
@@ -8,34 +9,30 @@ type AppState = {
   siteId: string;
   landingUtc: string;
   profileId: string;
-  compareSiteId: string | null;
+  /** A typed location that is not in the catalog. */
   customSite: Site | null;
   playheadUtc: string;
   playing: boolean;
-  detailsOpen: boolean;
   tourStep: number | null;
   aboutOpen: boolean;
   status: AppStatus;
   errorMessage: string | null;
   setSiteId: (siteId: string) => void;
-  setLandingDate: (date: string) => void;
   setLandingUtc: (landingUtc: string) => void;
   setProfileId: (profileId: string) => void;
-  setCompareSiteId: (compareSiteId: string) => void;
   setCustomSite: (site: Site) => void;
+  setPlayheadUtc: (playheadUtc: string) => void;
   setPlaying: (playing: boolean) => void;
   advancePlayhead: (durationHours: number) => void;
-  setDetailsOpen: (detailsOpen: boolean) => void;
   setTourStep: (tourStep: number | null) => void;
   setAboutOpen: (aboutOpen: boolean) => void;
   setStatus: (status: AppStatus, errorMessage: string | null) => void;
 };
 
+/** Horizons samples are 30 minutes apart, so the playhead never moves less than that. */
 const STEP_MS = 30 * 60 * 1000;
-
-function landingFromDate(date: string): string {
-  return `${date}T00:00:00Z`;
-}
+/** Playback covers any mission length in roughly this many frames. */
+const PLAYBACK_FRAMES = 400;
 
 function initialSelection() {
   if (typeof window === "undefined") return selectionFromSearch("");
@@ -43,48 +40,37 @@ function initialSelection() {
 }
 
 const initial = initialSelection();
+const initialCustom =
+  initial.latDeg !== undefined && initial.lonDegEast !== undefined
+    ? customSiteFromCoords(initial.latDeg, initial.lonDegEast)
+    : null;
 
 export const useAppStore = create<AppState>((set) => ({
   siteId: initial.siteId,
   landingUtc: initial.landingUtc,
   profileId: initial.profileId,
-  compareSiteId: initial.compareSiteId,
-  customSite: null,
+  customSite: initialCustom,
   playheadUtc: initial.landingUtc,
   playing: false,
-  detailsOpen: false,
   tourStep: null,
   aboutOpen: false,
   status: "loading",
   errorMessage: null,
-  setSiteId: (siteId) =>
-    set((state) => ({
-      siteId,
-      playheadUtc: state.landingUtc,
-      playing: false,
-      compareSiteId:
-        state.compareSiteId === siteId
-          ? siteId === "nobile-rim-1"
-            ? "shackleton-rim"
-            : "nobile-rim-1"
-          : state.compareSiteId,
-    })),
-  setLandingDate: (date) => {
-    const landingUtc = landingFromDate(date);
-    set({ landingUtc, playheadUtc: landingUtc, playing: false });
-  },
+  setSiteId: (siteId) => set((state) => ({ siteId, playheadUtc: state.landingUtc, playing: false })),
   setLandingUtc: (landingUtc) => set({ landingUtc, playheadUtc: landingUtc, playing: false }),
   setProfileId: (profileId) => set({ profileId, playing: false }),
-  setCompareSiteId: (compareSiteId) => set({ compareSiteId }),
-  setCustomSite: (site) => set({ customSite: site, siteId: site.id, playing: false }),
+  setCustomSite: (site) =>
+    set((state) => ({ customSite: site, siteId: site.id, playheadUtc: state.landingUtc, playing: false })),
+  setPlayheadUtc: (playheadUtc) => set({ playheadUtc }),
   setPlaying: (playing) => set({ playing }),
-  setDetailsOpen: (detailsOpen) => set({ detailsOpen }),
   setTourStep: (tourStep) => set({ tourStep }),
   setAboutOpen: (aboutOpen) => set({ aboutOpen }),
   advancePlayhead: (durationHours) =>
     set((state) => {
-      const next = Date.parse(state.playheadUtc) + STEP_MS;
-      const end = Date.parse(state.landingUtc) + durationHours * 3_600_000;
+      const durationMs = durationHours * 3_600_000;
+      const step = Math.max(STEP_MS, Math.round(durationMs / PLAYBACK_FRAMES / STEP_MS) * STEP_MS);
+      const next = Date.parse(state.playheadUtc) + step;
+      const end = Date.parse(state.landingUtc) + durationMs;
       if (next > end) {
         return { playing: false, playheadUtc: new Date(end).toISOString() };
       }
