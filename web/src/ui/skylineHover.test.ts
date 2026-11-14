@@ -13,6 +13,10 @@ describe("sunHoverLine", () => {
     expect(sunHoverLine(track, 0)).toBe("The Sun sets behind this ridge in 1 day.");
   });
 
+  it("says the Sun is down when the current sample is already dark", () => {
+    expect(sunHoverLine([{ lit: false }, { lit: true }], 0)).toBe("The Sun is down.");
+  });
+
   it("says the Sun stays up when the track never goes dark", () => {
     expect(sunHoverLine([{ lit: true }, { lit: true }], 0)).toBe(
       "The Sun stays up for this landing.",
