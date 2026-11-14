@@ -34,7 +34,7 @@ USER app
 EXPOSE 8000
 
 # /api/health answers as soon as the server is up; `demLoaded` shows whether terrain works.
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=120s --retries=8 \
     CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
 
 CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
