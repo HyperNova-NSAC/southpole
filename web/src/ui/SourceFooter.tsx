@@ -5,6 +5,8 @@ type SourceFooterProps = {
   lat: number;
   lon: number;
   compact?: boolean;
+  onTour?: () => void;
+  onAbout?: () => void;
 };
 
 const MOON_RADIUS_M = 1_737_400;
@@ -41,12 +43,22 @@ function fill(template: string, lat: number, lon: number, zoom: number): string 
     .replaceAll("{northDeg}", String(northDeg));
 }
 
-export function SourceFooter({ links, lat, lon, compact = false }: SourceFooterProps) {
+export function SourceFooter({ links, lat, lon, compact = false, onTour, onAbout }: SourceFooterProps) {
   const zoom = 1;
   return (
     <footer className={compact ? "footer compact" : "footer"}>
       {compact ? null : <p>{links.credit}</p>}
       <div className="footer-links">
+        {onTour ? (
+          <button type="button" className="link-button" onClick={onTour}>
+            Why is the pole hard?
+          </button>
+        ) : null}
+        {onAbout ? (
+          <button type="button" className="link-button" onClick={onAbout}>
+            About
+          </button>
+        ) : null}
         <a href={fill(links.quickmap, lat, lon, zoom)}>See this place in QuickMap</a>
         <a href={fill(links.moontrek, lat, lon, zoom)}>See this place in Moon Trek</a>
       </div>
