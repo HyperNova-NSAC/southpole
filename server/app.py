@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from pipeline.dem_grid import DemGrid, downsample, load_dem
 from pipeline.horizon import mask_for
+from pipeline.neighborhood import neighborhood_cells
 from server.horizons_proxy import get_horizons
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -26,6 +27,16 @@ class HorizonRequest(BaseModel):
     lat_deg: float = Field(alias="latDeg")
     lon_deg_east: float = Field(alias="lonDegEast")
     mast_m: float = Field(default=2.0, alias="mastM")
+
+    model_config = {"populate_by_name": True}
+
+
+class NeighborhoodRequest(BaseModel):
+    lat_deg: float = Field(alias="latDeg")
+    lon_deg_east: float = Field(alias="lonDegEast")
+    landing_utc: str = Field(alias="landingUtc")
+    duration_hours: float = Field(alias="durationHours")
+    profile_id: str = Field(alias="profileId")
 
     model_config = {"populate_by_name": True}
 
@@ -112,6 +123,34 @@ def horizon(req: HorizonRequest):
         return JSONResponse(content=mask.model_dump(by_alias=True))
     except Exception as exc:
         logger.exception("Horizon march failed")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "terrain", "message": str(exc)},
+        )
+
+
+@app.post("/api/neighborhood", response_model=None)
+def neighborhood(req: NeighborhoodRequest):
+    if _grid is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "terrain",
+                "message": "Elevation grid is not loaded on this server.",
+            },
+        )
+    try:
+        cells = neighborhood_cells(
+            _grid,
+            lat_deg=req.lat_deg,
+            lon_deg=req.lon_deg_east,
+            landing_utc=req.landing_utc,
+            duration_hours=req.duration_hours,
+            profile_id=req.profile_id,
+        )
+        return JSONResponse(content={"cells": cells})
+    except Exception as exc:
+        logger.exception("Neighborhood failed")
         return JSONResponse(
             status_code=503,
             content={"error": "terrain", "message": str(exc)},
