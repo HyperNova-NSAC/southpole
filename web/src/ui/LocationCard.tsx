@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Site } from "../contract/types";
 import {
@@ -194,9 +194,12 @@ function DurationField({
 }) {
   const [unit, setUnit] = useState<WindowUnit>(() => windowUnit(hours));
   const [amount, setAmount] = useState(() => formatWindowAmount(hours, windowUnit(hours)));
+  const unitRef = useRef(unit);
+  unitRef.current = unit;
   const limits = windowFieldLimits(unit);
 
-  useEffect(() => setAmount(formatWindowAmount(hours, unit)), [hours, unit]);
+  // A shared link or a clamp refreshes the number. Changing the unit does not.
+  useEffect(() => setAmount(formatWindowAmount(hours, unitRef.current)), [hours]);
 
   function commit(raw: string) {
     const parsed = Number.parseFloat(raw);
@@ -210,12 +213,13 @@ function DurationField({
   }
 
   function changeUnit(next: WindowUnit) {
-    const parsed = Number.parseFloat(amount);
-    if (Number.isFinite(parsed)) {
-      const converted = durationHoursFromAmount(parsed, unit);
-      if (Math.round(converted * 60) !== Math.round(hours * 60)) onChange(converted);
-    }
     setUnit(next);
+    const parsed = Number.parseFloat(amount);
+    if (!Number.isFinite(parsed)) return;
+    // The typed number stays put. 14 hours becomes 14 days, not 0.58 days.
+    const nextHours = durationHoursFromAmount(parsed, next);
+    setAmount(formatWindowAmount(nextHours, next));
+    if (Math.round(nextHours * 60) !== Math.round(hours * 60)) onChange(nextHours);
   }
 
   return (
