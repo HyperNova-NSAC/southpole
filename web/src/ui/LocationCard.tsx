@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import type { MissionProfile, Site } from "../contract/types";
-import { CUSTOM_SITE_ID } from "./query";
-import { SegmentedControl } from "./SegmentedControl";
+import type { Site } from "../contract/types";
+import {
+  CUSTOM_SITE_ID,
+  durationHoursFromAmount,
+  formatWindowAmount,
+  windowFieldLimits,
+  windowUnit,
+  type WindowUnit,
+} from "./query";
 
 type LocationCardProps = {
   /** Catalog sites offered as presets. */
   sites: Site[];
   site: Site | null;
   landingUtc: string;
-  profiles: MissionProfile[];
-  profileId: string;
-  onProfile: (profileId: string) => void;
+  durationHours: number;
+  onDuration: (durationHours: number) => void;
   onCoords: (latDeg: number, lonDegEast: number) => void;
   onPreset: (siteId: string) => void;
   onLanding: (landingUtc: string) => void;
@@ -42,9 +47,8 @@ export function LocationCard({
   sites,
   site,
   landingUtc,
-  profiles,
-  profileId,
-  onProfile,
+  durationHours,
+  onDuration,
   onCoords,
   onPreset,
   onLanding,
@@ -52,8 +56,10 @@ export function LocationCard({
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [when, setWhen] = useState(toInputValue(landingUtc));
+  const [unit, setUnit] = useState<WindowUnit>(() => windowUnit(durationHours));
+  const [amount, setAmount] = useState(() => formatWindowAmount(durationHours, windowUnit(durationHours)));
 
-  // Keep the fields in step when the site changes from elsewhere (preset, tour, URL).
+  // Keep the fields in step when the site changes from elsewhere (preset, URL).
   useEffect(() => {
     if (!site) return;
     setLat(site.latDeg.toFixed(4));
@@ -61,16 +67,39 @@ export function LocationCard({
   }, [site]);
 
   useEffect(() => setWhen(toInputValue(landingUtc)), [landingUtc]);
+  useEffect(() => setAmount(formatWindowAmount(durationHours, unit)), [durationHours, unit]);
 
   const latValue = parseCoord(lat, 90);
   const lonValue = parseCoord(lon, 360);
   const coordsValid = latValue !== null && lonValue !== null;
 
-  function submit(event: FormEvent) {
+  function commitAmount(raw: string) {
+    const parsed = Number.parseFloat(raw);
+    if (!Number.isFinite(parsed)) {
+      setAmount(formatWindowAmount(durationHours, unit));
+      return;
+    }
+    const hours = durationHoursFromAmount(parsed, unit);
+    setAmount(formatWindowAmount(hours, unit));
+    if (Math.round(hours * 60) !== Math.round(durationHours * 60)) onDuration(hours);
+  }
+
+  function changeUnit(next: WindowUnit) {
+    const parsed = Number.parseFloat(amount);
+    if (Number.isFinite(parsed)) {
+      const hours = durationHoursFromAmount(parsed, unit);
+      if (Math.round(hours * 60) !== Math.round(durationHours * 60)) onDuration(hours);
+    }
+    setUnit(next);
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (coordsValid) onCoords(latValue, lonValue);
     const next = fromInputValue(when);
     if (next && next !== landingUtc) onLanding(next);
+    const windowField = event.currentTarget.elements.namedItem("windowLength");
+    if (windowField instanceof HTMLInputElement) commitAmount(windowField.value);
   }
 
   const isCustom = site?.id === CUSTOM_SITE_ID;
@@ -122,17 +151,35 @@ export function LocationCard({
             <em>°E</em>
           </div>
         </label>
-        {profiles.length > 0 ? (
-          <div className="field wide mission">
-            <span>Mission</span>
-            <SegmentedControl
-              label="Mission profile"
-              options={profiles.map((profile) => ({ value: profile.id, label: profile.label }))}
-              value={profileId}
-              onChange={onProfile}
+        <label className="field wide">
+          <span>Window</span>
+          <div className="input-wrap">
+            <input
+              name="windowLength"
+              type="number"
+              inputMode={unit === "minutes" ? "numeric" : "decimal"}
+              min={windowFieldLimits(unit).min}
+              max={windowFieldLimits(unit).max}
+              step={windowFieldLimits(unit).step}
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              onBlur={(event) => {
+                if (event.target instanceof HTMLInputElement) commitAmount(event.target.value);
+              }}
+              aria-label="Window length"
             />
+            <select
+              className="unit"
+              aria-label="Window unit"
+              value={unit}
+              onChange={(event) => changeUnit(event.target.value as WindowUnit)}
+            >
+              <option value="minutes">Minutes</option>
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+            </select>
           </div>
-        ) : null}
+        </label>
         <label className="field wide">
           <span>Touchdown (UTC)</span>
           <div className="input-wrap">

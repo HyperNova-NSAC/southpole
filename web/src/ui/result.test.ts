@@ -43,6 +43,7 @@ describe("summarize", () => {
 
 describe("formatting", () => {
   it("shows hours under three days and days beyond", () => {
+    expect(formatDuration(0.5)).toBe("30 min");
     expect(formatDuration(6.2)).toBe("6 h");
     expect(formatDuration(50)).toBe("50 h");
     expect(formatDuration(84)).toBe("3.5 days");

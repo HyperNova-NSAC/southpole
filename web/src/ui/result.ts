@@ -25,7 +25,7 @@ const TITLES: Record<Verdict["light"], string> = {
 
 /** Hours as a short label: "50 h" under three days, "14 days" beyond. */
 export function formatDuration(hours: number): string {
-  if (hours < 1) return "< 1 h";
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
   if (hours < 72) return `${Math.round(hours)} h`;
   const days = hours / 24;
   return `${days < 10 ? Number(days.toFixed(1)) : Math.round(days)} days`;
@@ -100,12 +100,11 @@ function subtitleFor(
   profile: MissionProfile,
   failures: string[],
 ): string {
-  const days = Math.round(profile.durationHours / 24);
   if (verdict.light === "red") {
     if (failures.length === 0) return "The mission does not get enough sunlight.";
     const sentence = failures.join(", and ");
     return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
   }
   if (verdict.light === "amber") return "Inside the limits, but with very little margin.";
-  return `Sunlit ${percent(metrics.sunlitFraction)} of the ${days}-day mission, with Earth in contact ${percent(metrics.earthFraction)} of the time.`;
+  return `Sunlit ${percent(metrics.sunlitFraction)} of the ${formatDuration(profile.durationHours)} window, with Earth in contact ${percent(metrics.earthFraction)} of the time.`;
 }

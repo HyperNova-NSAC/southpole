@@ -8,23 +8,21 @@ export type AppStatus = "ready" | "loading" | "error";
 type AppState = {
   siteId: string;
   landingUtc: string;
-  profileId: string;
+  durationHours: number;
   /** A typed location that is not in the catalog. */
   customSite: Site | null;
   playheadUtc: string;
   playing: boolean;
-  tourStep: number | null;
   aboutOpen: boolean;
   status: AppStatus;
   errorMessage: string | null;
   setSiteId: (siteId: string) => void;
   setLandingUtc: (landingUtc: string) => void;
-  setProfileId: (profileId: string) => void;
+  setDurationHours: (durationHours: number) => void;
   setCustomSite: (site: Site) => void;
   setPlayheadUtc: (playheadUtc: string) => void;
   setPlaying: (playing: boolean) => void;
   advancePlayhead: (durationHours: number) => void;
-  setTourStep: (tourStep: number | null) => void;
   setAboutOpen: (aboutOpen: boolean) => void;
   setStatus: (status: AppStatus, errorMessage: string | null) => void;
 };
@@ -48,22 +46,29 @@ const initialCustom =
 export const useAppStore = create<AppState>((set) => ({
   siteId: initial.siteId,
   landingUtc: initial.landingUtc,
-  profileId: initial.profileId,
+  durationHours: initial.durationHours,
   customSite: initialCustom,
   playheadUtc: initial.landingUtc,
   playing: false,
-  tourStep: null,
   aboutOpen: false,
   status: "loading",
   errorMessage: null,
   setSiteId: (siteId) => set((state) => ({ siteId, playheadUtc: state.landingUtc, playing: false })),
   setLandingUtc: (landingUtc) => set({ landingUtc, playheadUtc: landingUtc, playing: false }),
-  setProfileId: (profileId) => set({ profileId, playing: false }),
+  setDurationHours: (durationHours) =>
+    set((state) => {
+      const end = Date.parse(state.landingUtc) + durationHours * 3_600_000;
+      const playhead = Date.parse(state.playheadUtc);
+      return {
+        durationHours,
+        playing: false,
+        playheadUtc: playhead > end ? new Date(end).toISOString() : state.playheadUtc,
+      };
+    }),
   setCustomSite: (site) =>
     set((state) => ({ customSite: site, siteId: site.id, playheadUtc: state.landingUtc, playing: false })),
   setPlayheadUtc: (playheadUtc) => set({ playheadUtc }),
   setPlaying: (playing) => set({ playing }),
-  setTourStep: (tourStep) => set({ tourStep }),
   setAboutOpen: (aboutOpen) => set({ aboutOpen }),
   advancePlayhead: (durationHours) =>
     set((state) => {
