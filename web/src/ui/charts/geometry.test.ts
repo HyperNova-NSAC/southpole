@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compassLabel, discRadiusPx, elevationDomain, nearestIndex, pxPerDeg, runsWhere, splitTrack } from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, nearestIndex, pxPerDeg, runsWhere, splitTrack, timelineDomain } from "./geometry";
 
 const p = (azDeg: number, on: boolean) => ({ azDeg, elDeg: 1, on });
 
@@ -22,6 +22,25 @@ describe("elevationDomain", () => {
     const [low, high] = elevationDomain([-5, 2, 4], [[{ elDeg: -60 }, { elDeg: 12 }]]);
     expect(low).toBe(-6);
     expect(high).toBe(13);
+  });
+});
+
+describe("timelineDomain", () => {
+  it("raises the top to fit a high Sun instead of stopping at 40°", () => {
+    const [low, high] = timelineDomain([-4, 80, 12]);
+    expect(low).toBe(-4);
+    expect(high).toBeGreaterThan(80);
+  });
+
+  it("keeps a low Sun in a readable band around the skyline", () => {
+    const [low, high] = timelineDomain([-1, 2]);
+    expect(low).toBe(-3);
+    expect(high).toBe(4);
+  });
+
+  it("does not let a deep night pull the floor down without limit", () => {
+    const [low] = timelineDomain([-80, 5]);
+    expect(low).toBe(-15);
   });
 });
 
