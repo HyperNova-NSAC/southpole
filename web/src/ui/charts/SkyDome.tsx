@@ -3,7 +3,7 @@ import { scaleLinear } from "d3-scale";
 import { areaRadial, lineRadial } from "d3-shape";
 import type { Instant } from "../../contract/types";
 import { Marker } from "./HorizonPanorama";
-import { compassLabel, elevationDomain, polarPoint, splitTrack, type TrackPoint } from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, polarPoint, pxPerDeg, splitTrack, type TrackPoint } from "./geometry";
 import { earthTrack, sunTrack } from "./tracks";
 import { useElementWidth } from "./useElementWidth";
 
@@ -46,6 +46,7 @@ export function SkyDome({ mask, samples, playhead, height = 440 }: SkyDomeProps)
     .radius((p) => r(p.elDeg));
 
   const at = (azDeg: number, elDeg: number) => polarPoint(azDeg, r(elDeg));
+  const scale = pxPerDeg(Math.abs(r(low) - r(high)), high - low);
 
   return (
     <div ref={containerRef} className="chart">
@@ -106,12 +107,14 @@ export function SkyDome({ mask, samples, playhead, height = 440 }: SkyDomeProps)
                   kind="earth"
                   visible={playhead.earthVisible}
                   label="Earth"
+                  radius={discRadiusPx(scale, playhead.earthAngDiamDeg)}
                 />
                 <Marker
                   {...at(playhead.sunAzDeg, playhead.sunElDeg)}
                   kind="sun"
                   visible={playhead.sunFrac >= 0.5}
                   label="Sun"
+                  radius={discRadiusPx(scale, playhead.sunAngDiamDeg)}
                 />
               </>
             ) : null}

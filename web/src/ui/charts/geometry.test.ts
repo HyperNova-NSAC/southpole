@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compassLabel, elevationDomain, nearestIndex, runsWhere, splitTrack } from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, nearestIndex, pxPerDeg, runsWhere, splitTrack } from "./geometry";
 
 const p = (azDeg: number, on: boolean) => ({ azDeg, elDeg: 1, on });
 
@@ -39,6 +39,17 @@ describe("nearestIndex", () => {
     expect(nearestIndex([0, 10, 20, 30], 14)).toBe(1);
     expect(nearestIndex([0, 10, 20, 30], 16)).toBe(2);
     expect(nearestIndex([0, 10, 20, 30], 99)).toBe(3);
+  });
+});
+
+describe("discRadiusPx", () => {
+  it("uses half the angular diameter, so Earth is about 3.5 times the Sun", () => {
+    const scale = pxPerDeg(200, 10);
+    const sun = discRadiusPx(scale, 0.54);
+    const earth = discRadiusPx(scale, 1.9);
+    expect(sun).toBeCloseTo(5.4);
+    expect(earth).toBeCloseTo(19);
+    expect(earth / sun).toBeCloseTo(1.9 / 0.54);
   });
 });
 

@@ -124,64 +124,17 @@ a:hover {
   outline-offset: 2px;
 }
 
-/* ---------- Navigation bar ---------- */
-
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--nav);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--separator);
-}
-
-.navbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 10px 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.wordmark {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 17px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-/* A crescent: the Moon catching low sunlight. */
-.wordmark-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 70% 35%, transparent 52%, var(--sun) 53%);
-  box-shadow: inset 0 0 0 1.5px var(--text-3);
-}
-
-.navbar-links {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
-}
-
 .link-button {
   border: 0;
   background: none;
   color: var(--blue);
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 0;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .link-button:hover {
-  background: var(--fill);
+  text-decoration: underline;
 }
 
 /* ---------- Segmented control ---------- */
@@ -222,28 +175,10 @@ a:hover {
 .content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 24px 64px;
+  padding: 24px 24px 64px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.page-header {
-  padding: 0 4px 8px;
-}
-
-.page-header h1 {
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-}
-
-.page-header p {
-  margin-top: 10px;
-  max-width: 680px;
-  font-size: 17px;
-  color: var(--text-2);
 }
 
 .top-grid {
@@ -268,12 +203,6 @@ a:hover {
 @media (max-width: 900px) {
   .top-grid {
     grid-template-columns: 1fr;
-  }
-  .navbar-inner {
-    flex-wrap: wrap;
-  }
-  .page-header h1 {
-    font-size: 32px;
   }
 }
 
@@ -353,6 +282,15 @@ a:hover {
 .field.wide,
 .location .button {
   grid-column: 1 / -1;
+}
+
+.mission .segmented {
+  display: flex;
+}
+
+.mission .segment {
+  flex: 1;
+  text-align: center;
 }
 
 .field > span {

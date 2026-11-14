@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import type { Site } from "../contract/types";
+import type { MissionProfile, Site } from "../contract/types";
 import { CUSTOM_SITE_ID } from "./query";
+import { SegmentedControl } from "./SegmentedControl";
 
 type LocationCardProps = {
   /** Catalog sites offered as presets. */
   sites: Site[];
   site: Site | null;
   landingUtc: string;
+  profiles: MissionProfile[];
+  profileId: string;
+  onProfile: (profileId: string) => void;
   onCoords: (latDeg: number, lonDegEast: number) => void;
   onPreset: (siteId: string) => void;
   onLanding: (landingUtc: string) => void;
@@ -34,7 +38,17 @@ function parseCoord(text: string, limit: number): number | null {
  * The two inputs that define a landing: where (latitude, longitude) and when (UTC).
  * Typed coordinates near a catalog site snap to it; the preset menu fills them in.
  */
-export function LocationCard({ sites, site, landingUtc, onCoords, onPreset, onLanding }: LocationCardProps) {
+export function LocationCard({
+  sites,
+  site,
+  landingUtc,
+  profiles,
+  profileId,
+  onProfile,
+  onCoords,
+  onPreset,
+  onLanding,
+}: LocationCardProps) {
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [when, setWhen] = useState(toInputValue(landingUtc));
@@ -108,6 +122,17 @@ export function LocationCard({ sites, site, landingUtc, onCoords, onPreset, onLa
             <em>°E</em>
           </div>
         </label>
+        {profiles.length > 0 ? (
+          <div className="field wide mission">
+            <span>Mission</span>
+            <SegmentedControl
+              label="Mission profile"
+              options={profiles.map((profile) => ({ value: profile.id, label: profile.label }))}
+              value={profileId}
+              onChange={onProfile}
+            />
+          </div>
+        ) : null}
         <label className="field wide">
           <span>Touchdown (UTC)</span>
           <div className="input-wrap">

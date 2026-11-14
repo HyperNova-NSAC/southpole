@@ -13,7 +13,6 @@ import { HORIZONS_LOADING, loadMissionData } from "./loadMission";
 import { LocationCard } from "./LocationCard";
 import { customSiteFromCoords, matchCatalogSite } from "./matchSite";
 import { indexFromTables, rememberIndex, suggestDates } from "./missionIndex";
-import { NavBar } from "./NavBar";
 import { CUSTOM_SITE_ID, searchFromSelection } from "./query";
 import { ResultCard } from "./ResultCard";
 import { summarize } from "./result";
@@ -201,26 +200,7 @@ export function App() {
 
   return (
     <div className="app">
-      <NavBar
-        profiles={profiles}
-        profileId={profileId}
-        onProfile={(id) => {
-          setTourStep(null);
-          setProfileId(id);
-        }}
-        onTour={() => setTourStep(0)}
-        onAbout={() => setAboutOpen(true)}
-      />
-
       <main className="content">
-        <header className="page-header">
-          <h1>Can you land here?</h1>
-          <p>
-            Pick a point and a touchdown time. Lunar Skyline checks sunlight for power and line of sight to
-            Earth across the whole mission, using the real terrain around the site.
-          </p>
-        </header>
-
         {tour && tourStep !== null ? (
           <TourCaption
             step={tourStep}
@@ -238,6 +218,12 @@ export function App() {
             sites={sites}
             site={site}
             landingUtc={landingUtc}
+            profiles={profiles}
+            profileId={profileId}
+            onProfile={(id) => {
+              setTourStep(null);
+              setProfileId(id);
+            }}
             onCoords={applyCoords}
             onPreset={(id) => {
               setTourStep(null);
@@ -296,7 +282,15 @@ export function App() {
           </div>
         ) : null}
 
-        {links && site ? <SourceFooter links={links} lat={site.latDeg} lon={site.lonDegEast} /> : null}
+        {links && site ? (
+          <SourceFooter
+            links={links}
+            lat={site.latDeg}
+            lon={site.lonDegEast}
+            onTour={() => setTourStep(0)}
+            onAbout={() => setAboutOpen(true)}
+          />
+        ) : null}
       </main>
 
       {aboutOpen && links ? <AboutDialog credit={links.credit} onClose={() => setAboutOpen(false)} /> : null}

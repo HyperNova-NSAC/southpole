@@ -87,6 +87,25 @@ export function nearestIndex(times: number[], ms: number): number {
   return Math.abs(times[hi] - ms) < Math.abs(times[lo] - ms) ? hi : lo;
 }
 
+/**
+ * Pixel radius of a Sun or Earth disc.
+ *
+ * `angDiamDeg` is the full angular diameter from Horizons (about 0.54° for the
+ * Sun and 1.9° for Earth). `pxPerDeg` is the chart's elevation scale, so the
+ * disc's height lines up with the degree axis. Both charts draw it as a circle:
+ * the panorama squeezes 360° of azimuth into the width, and a true ellipse
+ * would be a sliver.
+ */
+export function discRadiusPx(pxPerDeg: number, angDiamDeg: number): number {
+  return (Math.max(0, angDiamDeg) / 2) * Math.abs(pxPerDeg);
+}
+
+/** Pixels per degree of a linear scale, using its two end values. */
+export function pxPerDeg(spanPx: number, spanDeg: number): number {
+  if (spanDeg === 0) return 0;
+  return Math.abs(spanPx / spanDeg);
+}
+
 /** Polar chart position: azimuth clockwise from north (up), radius in pixels. */
 export function polarPoint(azDeg: number, radius: number): { x: number; y: number } {
   const a = (azDeg * Math.PI) / 180;

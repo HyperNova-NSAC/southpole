@@ -3,7 +3,7 @@ import type { PointerEvent } from "react";
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
 import type { Instant } from "../../contract/types";
-import { compassLabel, elevationDomain, splitTrack, type TrackPoint } from "./geometry";
+import { compassLabel, discRadiusPx, elevationDomain, pxPerDeg, splitTrack, type TrackPoint } from "./geometry";
 import { earthTrack, sunTrack } from "./tracks";
 import { useElementWidth } from "./useElementWidth";
 
@@ -68,6 +68,9 @@ export function HorizonPanorama({ mask, samples, playhead, height = 440 }: Horiz
   };
 
   const hoverRidge = hoverAz === null ? undefined : mask[hoverAz];
+  // Disc sizes are read off the elevation axis, which is the one compared to the skyline.
+  const [elLow, elHigh] = y.domain();
+  const scale = pxPerDeg(Math.abs(y(elLow) - y(elHigh)), elHigh - elLow);
 
   return (
     <div ref={containerRef} className="chart">
@@ -137,12 +140,14 @@ export function HorizonPanorama({ mask, samples, playhead, height = 440 }: Horiz
                   kind="earth"
                   visible={playhead.earthVisible}
                   label="Earth"
+                  radius={discRadiusPx(scale, playhead.earthAngDiamDeg)}
                 />
                 <Marker
                   {...clampToPlot(x(playhead.sunAzDeg), y(playhead.sunElDeg))}
                   kind="sun"
                   visible={playhead.sunFrac >= 0.5}
                   label="Sun"
+                  radius={discRadiusPx(scale, playhead.sunAngDiamDeg)}
                 />
               </>
             ) : null}
@@ -175,16 +180,18 @@ type MarkerProps = {
   kind: "sun" | "earth";
   visible: boolean;
   label: string;
+  /** Pixel radius matching the angular radius on the elevation scale. */
+  radius: number;
   anchor?: "start" | "middle" | "end";
 };
 
-/** A body at the playhead. Hollow when it is hidden behind the terrain. */
-export function Marker({ x, y, kind, visible, label, anchor = "middle" }: MarkerProps) {
+/** The Sun or Earth at the playhead: the same halo and dot as before, sized to the angular radius. */
+export function Marker({ x, y, kind, visible, label, radius, anchor = "middle" }: MarkerProps) {
   return (
     <g transform={`translate(${x},${y})`} className={`marker ${kind} ${visible ? "" : "hidden"}`}>
-      <circle r={16} className="halo" />
-      <circle r={kind === "sun" ? 8 : 7} className="disc" />
-      <text y={-16} textAnchor={anchor} className="marker-label">
+      <circle r={radius * 2} className="halo" />
+      <circle r={radius} className="disc" />
+      <text y={-(radius * 2 + 4)} textAnchor={anchor} className="marker-label">
         {label}
       </text>
     </g>
