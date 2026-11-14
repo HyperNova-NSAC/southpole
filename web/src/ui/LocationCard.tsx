@@ -53,7 +53,7 @@ export function LocationCard({
   const [lon, setLon] = useState("");
   const [when, setWhen] = useState(toInputValue(landingUtc));
 
-  // Keep the fields in step when the site changes from elsewhere (preset, tour, URL).
+  // Keep the fields in step when the site changes from elsewhere (preset, URL).
   useEffect(() => {
     if (!site) return;
     setLat(site.latDeg.toFixed(4));

@@ -910,44 +910,6 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Tour ---------- */
-
-.tour {
-  background: color-mix(in srgb, var(--blue) 10%, var(--card));
-  border-radius: var(--radius);
-  padding: 18px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tour-kicker {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--blue);
-}
-
-.tour-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.tour-actions button,
-.dialog button {
-  border: 0;
-  border-radius: 999px;
-  padding: 6px 14px;
-  background: var(--fill);
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.tour-actions button:disabled {
-  opacity: 0.4;
-}
-
 /* ---------- Footer ---------- */
 
 .footer {
@@ -1005,7 +967,11 @@ a:hover {
 
 .dialog button {
   align-self: flex-end;
+  border: 0;
+  border-radius: 999px;
   background: var(--blue);
   color: #fff;
   padding: 8px 18px;
+  font-weight: 500;
+  cursor: pointer;
 }
