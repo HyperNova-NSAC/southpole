@@ -8,9 +8,10 @@
 # It is mounted read-only rather than baked into the image. Without it the app still
 # works for the catalog sites, but typed coordinates report that terrain is unavailable.
 #
-# Run:   docker compose up --build -d
-# Open:  http://localhost:8080        (set WEB_PORT to change it)
-# Stop:  docker compose down
+# Local dev:  docker compose up --build -d   then open http://localhost:8080
+# Production: Coolify manages host-side port binding via its Traefik proxy.
+#             Set WEB_PORT only for local overrides; in Coolify configure the domain
+#             in the dashboard and it will inject the correct Traefik labels.
 #
 # Memory: the API reads the whole 7600x7600 elevation grid at start-up (about 230 MB as
 # float32, plus a downsampled copy and the Python libraries), roughly 1 GB in total.
@@ -40,8 +41,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    ports:
-      - "${WEB_PORT:-8080}:80"
+    # Coolify routes via Traefik — do not bind a host port here (8080 is used by
+    # coolify-proxy). For local dev, override with: docker compose up -e WEB_PORT=8080
+    expose:
+      - "80"
 
 volumes:
   api-cache:
