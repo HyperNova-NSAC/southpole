@@ -1,20 +1,38 @@
+import type { MissionProfile } from "../contract/types";
+
 type HeaderProps = {
-  profileLabel: string;
+  profiles: MissionProfile[];
+  profileId: string;
+  onProfile: (profileId: string) => void;
+  onWhy: () => void;
+  onAbout: () => void;
 };
 
-export function Header({ profileLabel }: HeaderProps) {
+export function Header({ profiles, profileId, onProfile, onWhy, onAbout }: HeaderProps) {
   return (
     <header className="header">
       <div className="wordmark">Lunar Skyline</div>
       <div className="header-actions">
         <label className="field">
           <span>Mission</span>
-          <select defaultValue={profileLabel} aria-label="Mission profile">
-            <option>{profileLabel}</option>
-            <option disabled>Long stay, 100 days</option>
+          <select
+            aria-label="Mission profile"
+            value={profileId}
+            onChange={(event) => onProfile(event.target.value)}
+          >
+            {profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.label}
+              </option>
+            ))}
           </select>
         </label>
-        <button type="button">Why is the south pole hard?</button>
+        <button type="button" onClick={onWhy}>
+          Why is the south pole hard?
+        </button>
+        <button type="button" onClick={onAbout}>
+          About
+        </button>
       </div>
     </header>
   );
