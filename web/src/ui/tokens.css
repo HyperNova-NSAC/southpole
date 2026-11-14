@@ -195,7 +195,7 @@ a:hover {
   display: grid;
   grid-template-columns: minmax(300px, 380px) 1fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .charts {
