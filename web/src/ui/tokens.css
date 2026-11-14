@@ -268,12 +268,116 @@ button:disabled {
 }
 
 .compare {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin-top: 8px;
   padding: 8px 12px;
 }
 
+.compare-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .compare p {
-  margin: 4px 0 0;
+  margin: 0;
+}
+
+.numbers-toggle {
+  margin-top: 8px;
+}
+
+.drawer {
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.drawer h2,
+.dialog h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+.drawer table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.drawer th,
+.drawer td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: 400;
+  text-align: left;
+}
+
+.drawer td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer p,
+.drawer li,
+.dialog p,
+.dialog li {
+  margin: 0 0 8px;
+}
+
+.choice-row,
+.lookup,
+.tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.lookup {
+  margin-bottom: 8px;
+}
+
+.tour {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.tour p {
+  margin: 0 0 8px;
+}
+
+.tour-kicker {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.dialog {
+  width: min(36rem, 100%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 8px 20px 20px;
+}
+
+.footer.compact .footer-links {
+  margin-top: 8px;
 }
 
 .footer {

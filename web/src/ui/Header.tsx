@@ -4,9 +4,11 @@ type HeaderProps = {
   profiles: MissionProfile[];
   profileId: string;
   onProfile: (profileId: string) => void;
+  onWhy: () => void;
+  onAbout: () => void;
 };
 
-export function Header({ profiles, profileId, onProfile }: HeaderProps) {
+export function Header({ profiles, profileId, onProfile, onWhy, onAbout }: HeaderProps) {
   return (
     <header className="header">
       <div className="wordmark">Lunar Skyline</div>
@@ -25,7 +27,12 @@ export function Header({ profiles, profileId, onProfile }: HeaderProps) {
             ))}
           </select>
         </label>
-        <button type="button">Why is the south pole hard?</button>
+        <button type="button" onClick={onWhy}>
+          Why is the south pole hard?
+        </button>
+        <button type="button" onClick={onAbout}>
+          About
+        </button>
       </div>
     </header>
   );

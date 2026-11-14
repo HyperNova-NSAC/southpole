@@ -17,10 +17,13 @@ export type MissionFiles = {
 
 export type LoadResult = { ok: true; files: MissionFiles } | { ok: false; message: string };
 
-export function horizonsWindow(landingUtc: string, durationHours: number): { start: string; stop: string } {
+export function horizonsWindow(
+  landingUtc: string,
+  durationHours: number,
+): { start: string; stop: string; startMs: number; stopMs: number } {
   const startMs = Date.parse(landingUtc);
   const stopMs = startMs + durationHours * 3_600_000;
-  return { start: horizonsStamp(startMs), stop: horizonsStamp(stopMs) };
+  return { start: horizonsStamp(startMs), stop: horizonsStamp(stopMs), startMs, stopMs };
 }
 
 export async function loadMissionData(
@@ -49,11 +52,11 @@ async function loadTable(
   fetchImpl: typeof fetch,
   site: Site,
   body: "sun" | "earth",
-  window: { start: string; stop: string },
+  window: { start: string; stop: string; startMs: number; stopMs: number },
 ): Promise<HorizonsTable | null> {
   const file = await readJson(fetchImpl, `/data/horizons/${site.id}-${body}.json`);
   const parsedFile = parseTable(file);
-  if (parsedFile) return parsedFile;
+  if (parsedFile && tableCovers(parsedFile, window.startMs, window.stopMs)) return parsedFile;
 
   const params = new URLSearchParams({
     siteId: site.id,
@@ -90,6 +93,14 @@ async function loadMask(fetchImpl: typeof fetch, site: Site): Promise<HorizonMas
   } catch {
     return null;
   }
+}
+
+function tableCovers(table: HorizonsTable, startMs: number, stopMs: number): boolean {
+  const samples = table.samples;
+  if (samples.length === 0) return false;
+  const first = Date.parse(samples[0].t);
+  const last = Date.parse(samples[samples.length - 1].t);
+  return first <= startMs + 1000 && last + 1000 >= stopMs;
 }
 
 function parseTable(value: unknown): HorizonsTable | null {

@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "title": "A low Sun",
+      "body": "The Moon is barely tilted, so the Sun stays low at the pole.",
+      "siteId": "shackleton-rim",
+      "landingUtc": "2027-03-03T00:00:00Z"
+    },
+    {
+      "title": "It circles",
+      "body": "Play the skyline. The Sun circles instead of rising high.",
+      "siteId": "shackleton-rim",
+      "landingUtc": "2027-03-03T00:00:00Z"
+    },
+    {
+      "title": "Long shadows",
+      "body": "A 1 m rock throws a shadow about 38 m long when the Sun is 1.5° up.",
+      "siteId": "shackleton-rim",
+      "landingUtc": "2027-03-03T00:00:00Z"
+    },
+    {
+      "title": "Ridge and floor",
+      "body": "Ridges stay bright. Crater floors stay dark.",
+      "siteId": "shackleton-floor",
+      "landingUtc": "2027-03-03T00:00:00Z"
+    },
+    {
+      "title": "Talking to Earth",
+      "body": "Earth moves above and below the horizon. That is when the mission can talk to Earth.",
+      "siteId": "shackleton-rim",
+      "landingUtc": "2027-03-03T00:00:00Z"
+    },
+    {
+      "title": "Read the sentence",
+      "body": "Try a date. Read the sentence.",
+      "siteId": "shackleton-rim",
+      "landingUtc": "2027-01-15T00:00:00Z"
+    }
+  ]
+}
