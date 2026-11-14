@@ -13,13 +13,13 @@ export function compare(
 ): string {
   const durationDays = durationHours / HOURS_PER_DAY;
   const contactDiffDays = (b.earthFraction - a.earthFraction) * durationDays;
-  const nightDiffHours = b.longestDarkHours - a.longestDarkHours;
+  const nightShorterHours = a.longestDarkHours - b.longestDarkHours;
 
   if (contactDiffDays > SAME_DIFFERENCE_DAYS) {
     return `${bName} stays in contact ${Math.round(contactDiffDays)} days longer.`;
   }
-  if (nightDiffHours > SAME_DIFFERENCE_HOURS) {
-    return `${bName}'s longest night is ${Math.round(nightDiffHours)} hours shorter.`;
+  if (nightShorterHours > SAME_DIFFERENCE_HOURS) {
+    return `${bName}'s longest night is ${Math.round(nightShorterHours)} hours shorter.`;
   }
   return `${bName} is about the same for this landing.`;
 }

@@ -54,48 +54,37 @@ def _local_frame(lat_deg: float, lon_deg: float) -> tuple[np.ndarray, np.ndarray
     return u, e, n
 
 
-def mask_for(
+def march_skyline(
     grid: DemGrid,
     lat_deg: float,
     lon_deg: float,
     mast_m: float,
     *,
-    site_id: str = "custom",
-) -> HorizonMask:
-    """Ray-march a 360° skyline from the elevation grid (PLAN §7.10)."""
+    az_step_deg: float = AZ_STEP_DEG,
+    max_range_m: float = MAX_RANGE_M,
+) -> tuple[list[float], float, bool]:
+    """Ray-march a skyline. Returns (mask_el_deg, height_m, terrain_included)."""
     height_m = grid.height_at(lat_deg, lon_deg)
+    n_az = int(round(360.0 / az_step_deg))
     if height_m is None:
-        site = Site(
-            id=site_id,
-            name=site_id,
-            latDeg=lat_deg,
-            lonDegEast=lon_deg,
-            heightM=0.0,
-            category="polar",
-            agency="",
-            notes="",
-            sourceUrl="",
-        )
-        return flat_mask(site, mast_m, height_m=0.0)
+        return [0.0] * n_az, 0.0, False
 
     u, e, n = _local_frame(lat_deg, lon_deg)
     r_site = (MOON_RADIUS_M + height_m + mast_m) * u
-    # Walk on the mean sphere from the surface point under the site.
     surface_hat = u
 
-    mask_el = np.full(360, -90.0, dtype=np.float64)
+    mask_el = np.full(n_az, -90.0, dtype=np.float64)
     hits = 0
 
-    for az in range(360):
-        az_rad = np.radians(az * AZ_STEP_DEG)
+    for i in range(n_az):
+        az_rad = np.radians(i * az_step_deg)
         dir_h = np.sin(az_rad) * e + np.cos(az_rad) * n
         dir_h /= np.linalg.norm(dir_h)
 
         max_el = -90.0
         ray_hit = False
         d = RANGE_START_M
-        while d <= MAX_RANGE_M:
-            # Destination on the sphere at ground range d (PLAN §7.10).
+        while d <= max_range_m:
             p_hat = np.cos(d / MOON_RADIUS_M) * surface_hat + np.sin(d / MOON_RADIUS_M) * dir_h
             p_hat /= np.linalg.norm(p_hat)
 
@@ -118,23 +107,40 @@ def mask_for(
 
         if ray_hit:
             hits += 1
-            mask_el[az] = max_el
+            mask_el[i] = max_el
         else:
-            mask_el[az] = 0.0
+            mask_el[i] = 0.0
 
-    if hits * 2 < 360:
+    if hits * 2 < n_az:
+        return [0.0] * n_az, float(height_m), False
+    return [float(v) for v in mask_el], float(height_m), True
+
+
+def mask_for(
+    grid: DemGrid,
+    lat_deg: float,
+    lon_deg: float,
+    mast_m: float,
+    *,
+    site_id: str = "custom",
+) -> HorizonMask:
+    """Ray-march a 360° skyline from the elevation grid (PLAN §7.10)."""
+    mask_el, height_m, terrain_included = march_skyline(
+        grid, lat_deg, lon_deg, mast_m, az_step_deg=1.0, max_range_m=MAX_RANGE_M
+    )
+    if not terrain_included:
         site = Site(
             id=site_id,
             name=site_id,
             latDeg=lat_deg,
             lonDegEast=lon_deg,
-            heightM=float(height_m),
+            heightM=height_m,
             category="polar",
             agency="",
             notes="",
             sourceUrl="",
         )
-        return flat_mask(site, mast_m, height_m=float(height_m))
+        return flat_mask(site, mast_m, height_m=height_m)
 
     return HorizonMask(
         siteId=site_id,
@@ -142,11 +148,16 @@ def mask_for(
         lonDegEast=lon_deg,
         mastM=mast_m,
         azStepDeg=1,
-        maskElDeg=[float(v) for v in mask_el],
-        heightM=float(height_m),
+        maskElDeg=mask_el,
+        heightM=height_m,
         demSource=grid.source,
         terrainIncluded=True,
     )
+
+
+def skyline_at(mask_el: list[float], az_deg: float, az_step_deg: float = 1.0) -> float:
+    i = int(round(az_deg / az_step_deg)) % len(mask_el)
+    return mask_el[i]
 
 
 def load_sites(path: Path | None = None) -> list[Site]:
@@ -226,9 +237,8 @@ def write_site_masks(
 
 
 def main() -> None:
-    write_site_masks(
-        ["shackleton-rim", "nobile-rim-1", "shackleton-floor", "apollo-11"]
-    )
+    # All catalog sites; equatorial ones stay flat when outside the polar DEM.
+    write_site_masks()
 
 
 if __name__ == "__main__":
