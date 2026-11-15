@@ -51,4 +51,20 @@ describe("planTransfer", () => {
       expect(point.rocketRadiusKm).toBeLessThanOrEqual(MOON_DISTANCE_KM + 1);
     }
   });
+
+  it.each([
+    ["four-day", 96],
+    ["apollo", 72],
+    ["fast", 52],
+  ] as const)("flies a %s coast in the chosen time and still meets the Moon", (kind, hours) => {
+    const chosen = planTransfer(ARRIVAL, kind);
+    expect(chosen.coastHours).toBeCloseTo(hours, 1);
+    expect(chosen.coastHours).toBeLessThan(plan.coastHours);
+    const end = stateAt(chosen, 1);
+    expect(end.rocketRadiusKm).toBeCloseTo(MOON_DISTANCE_KM, 0);
+    expect(gap(end.rocketLongitudeDeg, end.moonLongitudeDeg)).toBeLessThan(0.05);
+    for (const point of coastPath(chosen, 16)) {
+      expect(point.rocketRadiusKm).toBeLessThanOrEqual(MOON_DISTANCE_KM + 1);
+    }
+  });
 });

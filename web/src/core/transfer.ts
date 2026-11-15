@@ -13,13 +13,40 @@ export const MOON_SIDEREAL_DAYS = 27.321661;
 export const PARKING_HOURS = 2.5;
 
 const LEO_RADIUS_KM = EARTH_RADIUS_KM + LEO_ALTITUDE_KM;
-const TRANSFER_AXIS_KM = (LEO_RADIUS_KM + MOON_DISTANCE_KM) / 2;
-const TRANSFER_ECCENTRICITY = (MOON_DISTANCE_KM - LEO_RADIUS_KM) / (MOON_DISTANCE_KM + LEO_RADIUS_KM);
-const COAST_SECONDS = Math.PI * Math.sqrt(TRANSFER_AXIS_KM ** 3 / EARTH_MU_KM3_S2);
-const MEAN_MOTION = Math.sqrt(EARTH_MU_KM3_S2 / TRANSFER_AXIS_KM ** 3);
+const HOHMANN_AXIS_KM = (LEO_RADIUS_KM + MOON_DISTANCE_KM) / 2;
 const MOON_DEG_PER_MS = 360 / (MOON_SIDEREAL_DAYS * DAY_MS);
 
+export type TransferKind = "hohmann" | "four-day" | "apollo" | "fast";
+
+export const TRANSFER_OPTIONS: { id: TransferKind; label: string; coastHours: number | null; detail: string }[] = [
+  {
+    id: "hohmann",
+    label: "Hohmann transfer",
+    coastHours: null,
+    detail: "Minimum-energy ellipse. The rocket reaches the Moon at the far end of the coast.",
+  },
+  {
+    id: "four-day",
+    label: "4-day transfer",
+    coastHours: 96,
+    detail: "A shorter ellipse that meets the Moon before the far end of the coast.",
+  },
+  {
+    id: "apollo",
+    label: "Apollo transfer",
+    coastHours: 72,
+    detail: "About three days, the coast Apollo flew. The burn from Earth is harder than a Hohmann transfer.",
+  },
+  {
+    id: "fast",
+    label: "Fast transfer",
+    coastHours: 52,
+    detail: "The short elliptical coast from this parking orbit, a little over two days. A quicker flight would leave on a hyperbola.",
+  },
+];
+
 export type Transfer = {
+  kind: TransferKind;
   liftoffMs: number;
   departureMs: number;
   arrivalMs: number;
@@ -29,6 +56,10 @@ export type Transfer = {
   arrivalLongitudeDeg: number;
   /** Direction of the low point of the transfer, where the rocket leaves Earth orbit. */
   perigeeLongitudeDeg: number;
+  semiMajorKm: number;
+  eccentricity: number;
+  /** Mean motion of the transfer ellipse, radians per second. */
+  meanMotion: number;
 };
 
 export type CraftState = {
@@ -56,22 +87,28 @@ export function moonLongitudeDeg(utcMs: number): number {
 }
 
 /**
- * Hohmann transfer from a 185 km Earth orbit out to the Moon's mean orbit.
- * The burn is aimed so the rocket and the Moon arrive at the same place.
+ * Ellipse from a 185 km Earth orbit that meets the Moon's mean orbit.
+ * Hohmann arrives at the far end. Shorter coasts cross the Moon's orbit earlier
+ * and need a harder burn. The burn is aimed so the rocket and the Moon arrive together.
  */
-export function planTransfer(arrivalUtc: string): Transfer {
+export function planTransfer(arrivalUtc: string, kind: TransferKind = "hohmann"): Transfer {
+  const option = TRANSFER_OPTIONS.find((item) => item.id === kind) ?? TRANSFER_OPTIONS[0];
+  const ellipse = option.coastHours === null ? hohmannEllipse() : ellipseForCoast(option.coastHours * 3600);
   const arrivalMs = Date.parse(arrivalUtc);
-  const coastMs = COAST_SECONDS * 1000;
-  const departureMs = arrivalMs - coastMs;
+  const departureMs = arrivalMs - ellipse.seconds * 1000;
   const arrivalLongitudeDeg = moonLongitudeDeg(arrivalMs);
   return {
+    kind: option.id,
     liftoffMs: departureMs - PARKING_HOURS * 3_600_000,
     departureMs,
     arrivalMs,
-    coastHours: coastMs / 3_600_000,
+    coastHours: ellipse.seconds / 3600,
     parkingHours: PARKING_HOURS,
     arrivalLongitudeDeg,
-    perigeeLongitudeDeg: wrap(arrivalLongitudeDeg - 180),
+    perigeeLongitudeDeg: wrap(arrivalLongitudeDeg - (ellipse.trueAnomaly * 180) / Math.PI),
+    semiMajorKm: ellipse.semiMajorKm,
+    eccentricity: ellipse.eccentricity,
+    meanMotion: ellipse.meanMotion,
   };
 }
 
@@ -90,13 +127,13 @@ export function stateAt(plan: Transfer, fraction: number): CraftState {
       moonLongitudeDeg: moonLongitude,
     };
   }
-  const meanAnomaly = MEAN_MOTION * ((utcMs - plan.departureMs) / 1000);
-  const eccentric = solveKepler(meanAnomaly, TRANSFER_ECCENTRICITY);
-  const anomaly = trueAnomaly(eccentric, TRANSFER_ECCENTRICITY);
+  const meanAnomaly = plan.meanMotion * ((utcMs - plan.departureMs) / 1000);
+  const eccentric = solveKepler(meanAnomaly, plan.eccentricity);
+  const anomaly = trueAnomaly(eccentric, plan.eccentricity);
   return {
     utcMs,
     phase: "coast",
-    rocketRadiusKm: TRANSFER_AXIS_KM * (1 - TRANSFER_ECCENTRICITY * Math.cos(eccentric)),
+    rocketRadiusKm: plan.semiMajorKm * (1 - plan.eccentricity * Math.cos(eccentric)),
     rocketLongitudeDeg: wrap(plan.perigeeLongitudeDeg + (anomaly * 180) / Math.PI),
     moonLongitudeDeg: moonLongitude,
   };
@@ -114,16 +151,78 @@ export function coastPath(plan: Transfer, count = 90): CraftState[] {
   return points;
 }
 
-function solveKepler(meanAnomaly: number, eccentricity: number): number {
-  let eccentric = meanAnomaly + eccentricity * Math.sin(meanAnomaly);
-  for (let i = 0; i < 15; i += 1) {
-    const delta =
-      (eccentric - eccentricity * Math.sin(eccentric) - meanAnomaly) /
-      (1 - eccentricity * Math.cos(eccentric));
-    eccentric -= delta;
-    if (Math.abs(delta) < 1e-12) break;
+type Ellipse = {
+  semiMajorKm: number;
+  eccentricity: number;
+  meanMotion: number;
+  trueAnomaly: number;
+  seconds: number;
+};
+
+/** Time and angle to the point where an ellipse of this size crosses the Moon's orbit. */
+function crossing(semiMajorKm: number): Ellipse | null {
+  const eccentricity = 1 - LEO_RADIUS_KM / semiMajorKm;
+  const apogeeKm = semiMajorKm * (1 + eccentricity);
+  if (apogeeKm < MOON_DISTANCE_KM - 0.5) return null;
+  const atApogee = apogeeKm <= MOON_DISTANCE_KM + 1;
+  const cosNu = atApogee
+    ? -1
+    : (LEO_RADIUS_KM * (1 + eccentricity) / MOON_DISTANCE_KM - 1) / eccentricity;
+  if (cosNu < -1 || cosNu > 1) return null;
+  const trueAnomaly = Math.acos(cosNu);
+  const cosE = (eccentricity + cosNu) / (1 + eccentricity * cosNu);
+  const eccentric = Math.atan2(Math.sqrt(Math.max(0, 1 - cosE * cosE)), cosE);
+  const meanAnomaly = eccentric - eccentricity * Math.sin(eccentric);
+  const meanMotion = Math.sqrt(EARTH_MU_KM3_S2 / semiMajorKm ** 3);
+  return {
+    semiMajorKm,
+    eccentricity,
+    meanMotion,
+    trueAnomaly,
+    seconds: meanAnomaly / meanMotion,
+  };
+}
+
+function hohmannEllipse(): Ellipse {
+  const ellipse = crossing(HOHMANN_AXIS_KM);
+  if (!ellipse) throw new Error("Hohmann ellipse does not reach the Moon");
+  return ellipse;
+}
+
+/** Larger ellipses reach the Moon sooner. Search for the coast closest to the target. */
+function ellipseForCoast(targetSeconds: number): Ellipse {
+  const slow = hohmannEllipse();
+  if (targetSeconds >= slow.seconds) return slow;
+  let low = HOHMANN_AXIS_KM;
+  let high = HOHMANN_AXIS_KM;
+  let fastest = slow;
+  for (let i = 0; i < 24; i += 1) {
+    high *= 1.5;
+    const candidate = crossing(high);
+    if (!candidate) break;
+    fastest = candidate;
+    if (candidate.seconds <= targetSeconds) break;
   }
-  return eccentric;
+  if (fastest.seconds > targetSeconds) return fastest;
+  for (let i = 0; i < 48; i += 1) {
+    const mid = (low + high) / 2;
+    const candidate = crossing(mid);
+    if (!candidate || candidate.seconds > targetSeconds) low = mid;
+    else high = mid;
+  }
+  return crossing(high) ?? fastest;
+}
+
+/** Outbound coasts stay within half an orbit, where this equation has one solution. */
+function solveKepler(meanAnomaly: number, eccentricity: number): number {
+  let low = 0;
+  let high = Math.PI;
+  for (let i = 0; i < 60; i += 1) {
+    const mid = (low + high) / 2;
+    if (mid - eccentricity * Math.sin(mid) < meanAnomaly) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
 }
 
 function trueAnomaly(eccentric: number, eccentricity: number): number {

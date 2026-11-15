@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MOON_DISTANCE_KM, coastPath, planTransfer, stateAt, type CraftState } from "../core/transfer";
+import {
+  MOON_DISTANCE_KM,
+  TRANSFER_OPTIONS,
+  coastPath,
+  planTransfer,
+  stateAt,
+  type CraftState,
+  type TransferKind,
+} from "../core/transfer";
 
 type TrajectoryDialogProps = {
   place: string;
@@ -41,7 +49,9 @@ function line(points: CraftState[], radiusOf: (point: CraftState) => number, lon
 }
 
 export function TrajectoryDialog({ place, arrivalUtc, onClose }: TrajectoryDialogProps) {
-  const plan = useMemo(() => planTransfer(arrivalUtc), [arrivalUtc]);
+  const [kind, setKind] = useState<TransferKind>("hohmann");
+  const plan = useMemo(() => planTransfer(arrivalUtc, kind), [arrivalUtc, kind]);
+  const detail = TRANSFER_OPTIONS.find((option) => option.id === kind)?.detail ?? "";
   const path = useMemo(() => coastPath(plan), [plan]);
   const [fraction, setFraction] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -79,6 +89,13 @@ export function TrajectoryDialog({ place, arrivalUtc, onClose }: TrajectoryDialo
     (point) => point.moonLongitudeDeg,
   );
 
+  function chooseKind(next: TransferKind) {
+    setKind(next);
+    fractionRef.current = 0;
+    setFraction(0);
+    setPlaying(false);
+  }
+
   function togglePlay() {
     if (fraction >= 0.999) {
       fractionRef.current = 0;
@@ -98,10 +115,21 @@ export function TrajectoryDialog({ place, arrivalUtc, onClose }: TrajectoryDialo
         aria-labelledby="trajectory-title"
         onClick={(event) => event.stopPropagation()}
       >
+        <div className="trajectory-scroll">
         <h2 id="trajectory-title">Rocket trajectory</h2>
         <p className="card-subtitle">
           A viable landing at {place}. The rocket meets the Moon at {stamp(plan.arrivalMs)}.
         </p>
+        <label className="trajectory-kind">
+          <span>Trajectory</span>
+          <select aria-label="Trajectory" value={kind} onChange={(event) => chooseKind(event.target.value as TransferKind)}>
+            {TRANSFER_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <dl className="trajectory-facts">
           <div>
             <dt>Liftoff</dt>
@@ -116,7 +144,7 @@ export function TrajectoryDialog({ place, arrivalUtc, onClose }: TrajectoryDialo
             <dd>{stamp(plan.arrivalMs)}</dd>
           </div>
         </dl>
-        <svg className="trajectory-plot" viewBox="0 0 640 520" role="img" aria-label="Earth and Moon from above the ecliptic">
+        <svg className="trajectory-plot" viewBox="0 40 640 440" role="img" aria-label="Earth and Moon from above the ecliptic">
           <circle cx={CX} cy={CY} r={ORBIT} className="trajectory-orbit" />
           <polyline points={moonPath} className="trajectory-moon-path" />
           <polyline points={rocketPath} className="trajectory-rocket-path" />
@@ -153,35 +181,38 @@ export function TrajectoryDialog({ place, arrivalUtc, onClose }: TrajectoryDialo
             <i className="swatch off" /> Moon
           </li>
         </ul>
-        <div className="playback">
-          <button type="button" className="play" aria-label={playing ? "Pause" : "Play"} onClick={togglePlay}>
-            {playing ? "❚❚" : "▶"}
-          </button>
-          <input
-            type="range"
-            className="scrubber"
-            min={0}
-            max={1000}
-            step={1}
-            value={Math.round(fraction * 1000)}
-            aria-label="Flight"
-            onChange={(event) => {
-              const next = Number(event.target.value) / 1000;
-              fractionRef.current = next;
-              setFraction(next);
-              setPlaying(false);
-            }}
-          />
-          <span className="playback-time">{stamp(now.utcMs)}</span>
-        </div>
         <p className="trajectory-note">
-          The coast is a Hohmann transfer from a 185 km orbit to the Moon’s mean distance, aimed so the two meet.
-          Liftoff is {plan.parkingHours} hours before that burn. Looking down from the north ecliptic pole. Earth is
-          drawn larger than scale.
+          {detail} Each coast leaves a 185 km orbit and is aimed so the rocket and the Moon arrive together. Liftoff is{" "}
+          {plan.parkingHours} hours before that burn. Looking down from the north ecliptic pole. Earth is drawn larger
+          than scale.
         </p>
-        <button type="button" className="dialog-close" onClick={onClose}>
-          Close
-        </button>
+        </div>
+        <div className="trajectory-controls">
+          <div className="playback">
+            <button type="button" className="play" aria-label={playing ? "Pause" : "Play"} onClick={togglePlay}>
+              {playing ? "❚❚" : "▶"}
+            </button>
+            <input
+              type="range"
+              className="scrubber"
+              min={0}
+              max={1000}
+              step={1}
+              value={Math.round(fraction * 1000)}
+              aria-label="Flight"
+              onChange={(event) => {
+                const next = Number(event.target.value) / 1000;
+                fractionRef.current = next;
+                setFraction(next);
+                setPlaying(false);
+              }}
+            />
+            <span className="playback-time">{stamp(now.utcMs)}</span>
+          </div>
+          <button type="button" className="dialog-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
