@@ -1,5 +1,6 @@
 import { horizonMaskSchema, horizonsTableSchema } from "../contract/schemas";
 import type { HorizonMask, HorizonsTable, Site } from "../contract/types";
+import { cachedRequest } from "./requestCache";
 
 export const HORIZONS_LOADING = "Asking JPL Horizons…";
 export const TERRAIN_LOADING = "Reading the terrain…";
@@ -54,8 +55,8 @@ async function loadTable(
   body: "sun" | "earth",
   window: { start: string; stop: string; startMs: number; stopMs: number },
 ): Promise<HorizonsTable | null> {
-  const file = await readJson(fetchImpl, `/data/horizons/${site.id}-${body}.json`);
-  const parsedFile = parseTable(file);
+  const fileUrl = `/data/horizons/${site.id}-${body}.json`;
+  const parsedFile = await cachedRequest(fileUrl, async () => parseTable(await readJson(fetchImpl, fileUrl)));
   if (parsedFile && tableCovers(parsedFile, window.startMs, window.stopMs)) return parsedFile;
 
   const params = new URLSearchParams({
@@ -67,11 +68,16 @@ async function loadTable(
     start: window.start,
     stop: window.stop,
   });
-  const live = await readJson(fetchImpl, `/api/horizons?${params.toString()}`);
-  return parseTable(live);
+  const apiUrl = `/api/horizons?${params.toString()}`;
+  return cachedRequest(apiUrl, async () => parseTable(await readJson(fetchImpl, apiUrl)));
 }
 
 async function loadMask(fetchImpl: typeof fetch, site: Site): Promise<HorizonMask | null> {
+  const key = `mask|${site.id}|${site.latDeg}|${site.lonDegEast}|${site.heightM}`;
+  return cachedRequest(key, () => fetchMask(fetchImpl, site));
+}
+
+async function fetchMask(fetchImpl: typeof fetch, site: Site): Promise<HorizonMask | null> {
   const file = await readJson(fetchImpl, `/data/masks/${site.id}.json`);
   const parsedFile = parseMask(file);
   if (parsedFile) return parsedFile;

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Site } from "../contract/types";
 import { HORIZONS_FAILURE, TERRAIN_FAILURE, loadMissionData } from "./loadMission";
+import { clearRequestCache } from "./requestCache";
 
 const site: Site = {
   id: "shackleton-rim",
@@ -54,6 +55,8 @@ function respond(body: unknown, status = 200, type = "application/json"): Respon
 }
 
 describe("loadMissionData", () => {
+  beforeEach(() => clearRequestCache());
+
   it("uses the cached files and does not call the API", async () => {
     const calls: string[] = [];
     const fetchImpl = (async (input: RequestInfo | URL) => {
@@ -130,5 +133,23 @@ describe("loadMissionData", () => {
     const result = await loadMissionData(site, "2027-08-01T00:00:00Z", 336, fetchImpl);
     expect(result.ok).toBe(true);
     expect(calls.some((url) => url.includes("/api/horizons"))).toBe(true);
+  });
+
+  it("reads each ephemeris file once when two windows ask for it", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      calls.push(String(input));
+      const url = String(input);
+      if (url.includes("-sun.json")) return respond(table("sun"));
+      if (url.includes("-earth.json")) return respond(table("earth"));
+      if (url.includes("/data/masks/")) return respond(mask());
+      return respond("no", 404, "text/plain");
+    }) as typeof fetch;
+
+    await loadMissionData(site, "2027-03-03T00:00:00Z", 336, fetchImpl);
+    await loadMissionData(site, "2027-03-04T00:00:00Z", 48, fetchImpl);
+    expect(calls.filter((url) => url.includes("-sun.json"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("-earth.json"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("/data/masks/"))).toHaveLength(1);
   });
 });

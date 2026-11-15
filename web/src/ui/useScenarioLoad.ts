@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
-import type { HorizonMask, Instant, MissionProfile, Site, WindowMetrics } from "../contract/types";
-import { EARTH_COMM_MARGIN_DEG, evaluateMission } from "../core/evaluate";
-import type { SlipIndex } from "../core/slip";
-import { HORIZONS_LOADING, loadMissionData } from "./loadMission";
-import { indexFromTables, rememberIndex } from "./missionIndex";
+import type { MissionProfile, Site } from "../contract/types";
+import { HORIZONS_LOADING } from "./loadMission";
+import { loadScenario, peekScenario, scenarioCacheKey, type LoadedMission } from "./scenarioCache";
 import { siteForScenario, type Scenario } from "./scenarios";
 
-export type LoadedMission = {
-  siteId: string;
-  samples: Instant[];
-  metrics: WindowMetrics;
-  mask: HorizonMask;
-  terrainNote: string | null;
-  index: SlipIndex;
-};
+export type { LoadedMission };
 
 export type ScenarioLoad = {
   status: "idle" | "loading" | "ready" | "error";
@@ -24,8 +15,8 @@ export type ScenarioLoad = {
 const IDLE: ScenarioLoad = { status: "idle", message: null, mission: null };
 
 /**
- * Load one landing's ephemeris and terrain. A reload keeps the previous result
- * on screen until the new one arrives. The night limit is not part of this load.
+ * Load one landing's ephemeris and terrain. A landing already scored this session
+ * is returned immediately. The night limit is not part of this load.
  */
 export function useScenarioLoad(
   scenario: Scenario | null,
@@ -39,10 +30,16 @@ export function useScenarioLoad(
   const landingUtc = scenario?.landingUtc ?? "";
   const durationHours = scenario?.durationHours ?? 0;
   const rulesReady = profiles.length > 0;
-  const key = scenario ? `${siteKey}|${landingUtc}|${durationHours}` : "";
+  const key = site ? scenarioCacheKey(site, landingUtc, durationHours) : "";
+  const cached = key ? peekScenario(key) : undefined;
 
   useEffect(() => {
     if (!scenario || !site || !rulesReady) return;
+    const ready = peekScenario(key);
+    if (ready) {
+      setLoad({ key, status: "ready", message: null, mission: ready });
+      return;
+    }
     let cancelled = false;
     setLoad((current) => ({
       key,
@@ -50,24 +47,15 @@ export function useScenarioLoad(
       message: HORIZONS_LOADING,
       mission: current.key === key ? current.mission : null,
     }));
-    void loadMissionData(site, landingUtc, durationHours, fetch, (message) => {
-      if (!cancelled) setLoad((current) => ({ ...current, status: "loading", message }));
+    void loadScenario(site, landingUtc, durationHours, fetch, (message) => {
+      if (!cancelled) setLoad((current) => (current.key === key ? { ...current, status: "loading", message } : current));
     }).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
         setLoad({ key, status: "error", message: result.message, mission: null });
         return;
       }
-      const { sun, earth, mask, terrainNote } = result.files;
-      const evaluated = evaluateMission(sun, earth, mask, landingUtc, durationHours, EARTH_COMM_MARGIN_DEG);
-      const index = indexFromTables(site.id, sun, earth, mask);
-      rememberIndex(index);
-      setLoad({
-        key,
-        status: "ready",
-        message: null,
-        mission: { siteId: site.id, ...evaluated, mask, terrainNote, index },
-      });
+      setLoad({ key, status: "ready", message: null, mission: result.mission });
     });
     return () => {
       cancelled = true;
@@ -77,6 +65,7 @@ export function useScenarioLoad(
   }, [key, siteKey, landingUtc, durationHours, rulesReady]);
 
   if (!scenario) return IDLE;
+  if (cached) return { status: "ready", message: null, mission: cached };
   // A column that moved into this slot must not keep showing the previous landing.
   if (load.key !== key) return { status: "loading", message: HORIZONS_LOADING, mission: null };
   return load;
