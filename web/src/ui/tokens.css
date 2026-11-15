@@ -278,6 +278,24 @@ a:hover {
   cursor: default;
 }
 
+.button.secondary {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+}
+
+.button.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.result .button.secondary {
+  margin-top: 14px;
+}
+
 /* ---------- Location card (inputs) ---------- */
 
 .location .fields {
@@ -1011,13 +1029,112 @@ a:hover {
   cursor: pointer;
 }
 
-.compare-open:hover {
+.compare-open:hover:not(:disabled) {
   color: #fff;
+}
+
+.compare-open:disabled {
+  color: var(--text-3);
+  opacity: 0.45;
+  cursor: default;
 }
 
 .dialog-close:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.trajectory-dialog {
+  width: min(760px, 100%);
+  max-width: none;
+}
+
+.trajectory-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.trajectory-facts dt {
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trajectory-facts dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.trajectory-plot {
+  width: 100%;
+  height: auto;
+}
+
+.trajectory-orbit {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1.5;
+}
+
+.trajectory-moon-path {
+  fill: none;
+  stroke: rgba(142, 182, 255, 0.45);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+}
+
+.trajectory-rocket-path {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.trajectory-earth circle {
+  fill: #8eb6ff;
+}
+
+.trajectory-earth text,
+.trajectory-moon text,
+.trajectory-ghost text {
+  fill: var(--text-2);
+  font-size: 12px;
+  font-family: var(--font);
+}
+
+.trajectory-moon circle {
+  fill: #f2f2f4;
+}
+
+.trajectory-ghost circle {
+  fill: none;
+  stroke: rgba(242, 242, 244, 0.7);
+  stroke-width: 1.5;
+}
+
+.trajectory-ghost text {
+  fill: var(--text-3);
+}
+
+.trajectory-rocket {
+  fill: #fff;
+  stroke: var(--sun);
+  stroke-width: 2;
+}
+
+.trajectory-legend {
+  margin-top: 0;
+}
+
+.trajectory-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 13px;
 }
 
 .compare-dialog {

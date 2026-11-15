@@ -16,6 +16,7 @@ import { CUSTOM_SITE_ID, searchFromSelection } from "./query";
 import type { Scenario } from "./scenarios";
 import { useScenarioLoad } from "./useScenarioLoad";
 import { ResultCard } from "./ResultCard";
+import { TrajectoryDialog } from "./TrajectoryDialog";
 import { summarize } from "./result";
 import { SkyCard } from "./SkyCard";
 import { SourceFooter } from "./SourceFooter";
@@ -27,6 +28,7 @@ export function App() {
   const [profiles, setProfiles] = useState<MissionProfile[]>([]);
   const [links, setLinks] = useState<Links | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [trajectoryOpen, setTrajectoryOpen] = useState(false);
 
   const siteId = useAppStore((state) => state.siteId);
   const landingUtc = useAppStore((state) => state.landingUtc);
@@ -138,13 +140,17 @@ export function App() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      if (trajectoryOpen) {
+        setTrajectoryOpen(false);
+        return;
+      }
       const state = useAppStore.getState();
       if (state.aboutOpen) state.setAboutOpen(false);
       setCompareOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [trajectoryOpen]);
 
   useEffect(() => {
     if (!playing) return;
@@ -209,6 +215,7 @@ export function App() {
               nextLandings={nextLandings}
               terrainNote={mission.terrainNote}
               onLanding={setLandingUtc}
+              onTrajectory={() => setTrajectoryOpen(true)}
             />
           ) : (
             <ResultCard
@@ -262,6 +269,9 @@ export function App() {
       </main>
 
       {aboutOpen && links ? <AboutDialog credit={links.credit} onClose={() => setAboutOpen(false)} /> : null}
+      {trajectoryOpen && summary?.tone === "green" && site ? (
+        <TrajectoryDialog place={site.name} arrivalUtc={landingUtc} onClose={() => setTrajectoryOpen(false)} />
+      ) : null}
       {compareOpen ? (
         <CompareDialog
           sites={sites}

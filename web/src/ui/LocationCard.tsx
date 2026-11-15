@@ -179,7 +179,7 @@ export function LocationCard({
             : "Typed points within 2 km of a known site use that site."}
         </span>
         {onCompare ? (
-          <button type="button" className="compare-open" onClick={onCompare}>
+          <button type="button" className="button secondary" onClick={onCompare}>
             Compare against
           </button>
         ) : null}

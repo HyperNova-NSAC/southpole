@@ -14,6 +14,7 @@ type ResultCardProps =
       nextLandings: string[];
       terrainNote: string | null;
       onLanding: (landingUtc: string) => void;
+      onTrajectory?: () => void;
     };
 
 const ICONS = { green: "✓", amber: "!", red: "✕" } as const;
@@ -37,7 +38,7 @@ export function ResultCard(props: ResultCardProps) {
     );
   }
 
-  const { summary, metrics, profile, nextLandings, terrainNote, onLanding } = props;
+  const { summary, metrics, profile, nextLandings, terrainNote, onLanding, onTrajectory } = props;
   const limit = profile.maxLongestDarkHours;
 
   return (
@@ -51,6 +52,11 @@ export function ResultCard(props: ResultCardProps) {
           <p className="status-subtitle">{summary.subtitle}</p>
         </div>
       </div>
+      {onTrajectory ? (
+        <button type="button" className="button secondary" disabled={summary.tone !== "green"} onClick={onTrajectory}>
+          Find rocket trajectory
+        </button>
+      ) : null}
 
       <ul className="checks">
         {summary.checks.map((check) => (
