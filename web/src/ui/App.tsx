@@ -1,33 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { linksSchema, profilesFileSchema, sitesFileSchema } from "../contract/schemas";
-import type { HorizonMask, Instant, Links, MissionProfile, Site, Verdict, WindowMetrics } from "../contract/types";
-import { EARTH_COMM_MARGIN_DEG, evaluateMission } from "../core/evaluate";
-import type { SlipIndex } from "../core/slip";
+import type { Links, MissionProfile, Site } from "../contract/types";
+import { EARTH_COMM_MARGIN_DEG } from "../core/evaluate";
 import { buildVerdict } from "../core/verdict";
 import { useAppStore } from "../state/store";
 import { AboutDialog } from "./AboutDialog";
 import { MissionTimeline } from "./charts/MissionTimeline";
 import { nearestIndex } from "./charts/geometry";
-import { HORIZONS_LOADING, loadMissionData } from "./loadMission";
+import { CompareDialog } from "./CompareDialog";
+import { HORIZONS_LOADING } from "./loadMission";
 import { LocationCard } from "./LocationCard";
 import { customSiteFromCoords, matchCatalogSite } from "./matchSite";
-import { indexFromTables, rememberIndex, suggestDates } from "./missionIndex";
+import { suggestDates } from "./missionIndex";
 import { CUSTOM_SITE_ID, searchFromSelection } from "./query";
+import type { Scenario } from "./scenarios";
+import { useScenarioLoad } from "./useScenarioLoad";
 import { ResultCard } from "./ResultCard";
 import { summarize } from "./result";
 import { SkyCard } from "./SkyCard";
 import { SourceFooter } from "./SourceFooter";
-
-/** Everything derived from one evaluated landing. */
-type MissionView = {
-  siteId: string;
-  samples: Instant[];
-  metrics: WindowMetrics;
-  verdict: Verdict;
-  mask: HorizonMask;
-  terrainNote: string | null;
-  index: SlipIndex;
-};
 
 const PLAYBACK_INTERVAL_MS = 70;
 
@@ -35,7 +26,7 @@ export function App() {
   const [sites, setSites] = useState<Site[]>([]);
   const [profiles, setProfiles] = useState<MissionProfile[]>([]);
   const [links, setLinks] = useState<Links | null>(null);
-  const [mission, setMission] = useState<MissionView | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const siteId = useAppStore((state) => state.siteId);
   const landingUtc = useAppStore((state) => state.landingUtc);
@@ -45,8 +36,6 @@ export function App() {
   const playheadUtc = useAppStore((state) => state.playheadUtc);
   const playing = useAppStore((state) => state.playing);
   const aboutOpen = useAppStore((state) => state.aboutOpen);
-  const status = useAppStore((state) => state.status);
-  const errorMessage = useAppStore((state) => state.errorMessage);
   const {
     setSiteId,
     setLandingUtc,
@@ -80,6 +69,35 @@ export function App() {
     const rules = profiles.find((item) => item.id === "small-lander") ?? profiles[0];
     return rules ? { ...rules, durationHours, maxLongestDarkHours: maxNightHours } : null;
   }, [profiles, durationHours, maxNightHours]);
+
+  const currentScenario = useMemo<Scenario>(() => {
+    const scenario: Scenario = {
+      id: "current",
+      siteId,
+      landingUtc,
+      durationHours,
+      maxNightHours,
+    };
+    if (siteId === CUSTOM_SITE_ID && customSite) {
+      scenario.latDeg = customSite.latDeg;
+      scenario.lonDegEast = customSite.lonDegEast;
+    }
+    return scenario;
+  }, [siteId, landingUtc, durationHours, maxNightHours, customSite]);
+  const activeLoad = useScenarioLoad(currentScenario, sites, profiles);
+
+  /** Show one compared landing as the page, including its sky and timeline. */
+  function useScenario(scenario: Scenario) {
+    setDurationHours(scenario.durationHours);
+    setMaxNightHours(scenario.maxNightHours);
+    if (scenario.siteId === CUSTOM_SITE_ID && scenario.latDeg !== undefined && scenario.lonDegEast !== undefined) {
+      setCustomSite(customSiteFromCoords(scenario.latDeg, scenario.lonDegEast));
+    } else if (scenario.siteId !== siteId) {
+      setSiteId(scenario.siteId);
+    }
+    if (scenario.landingUtc !== landingUtc) setLandingUtc(scenario.landingUtc);
+    setCompareOpen(false);
+  }
 
   /** Typed coordinates snap to a catalog site within 2 km, otherwise become a custom site. */
   function applyCoords(latDeg: number, lonDegEast: number) {
@@ -122,44 +140,11 @@ export function App() {
       if (event.key !== "Escape") return;
       const state = useAppStore.getState();
       if (state.aboutOpen) state.setAboutOpen(false);
+      setCompareOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // Load ephemerides and terrain, then evaluate the landing.
-  // The night limit only changes the verdict, so it does not reload this data.
-  useEffect(() => {
-    const rules = profiles.find((item) => item.id === "small-lander") ?? profiles[0];
-    if (!site || !rules) return;
-    const active = { ...rules, durationHours, maxLongestDarkHours: useAppStore.getState().maxNightHours };
-    let cancelled = false;
-    useAppStore.getState().setStatus("loading", HORIZONS_LOADING);
-    void loadMissionData(site, landingUtc, durationHours, fetch, (message) => {
-      if (!cancelled) useAppStore.getState().setStatus("loading", message);
-    }).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        useAppStore.getState().setStatus("error", result.message);
-        return;
-      }
-      const { sun, earth, mask, terrainNote } = result.files;
-      const evaluated = evaluateMission(sun, earth, mask, landingUtc, durationHours, EARTH_COMM_MARGIN_DEG);
-      const verdict = buildVerdict({
-        metrics: evaluated.metrics,
-        profile: active,
-        landing: evaluated.samples[0],
-        commMarginDeg: EARTH_COMM_MARGIN_DEG,
-      });
-      const index = indexFromTables(site.id, sun, earth, mask);
-      rememberIndex(index);
-      setMission({ siteId: site.id, ...evaluated, verdict, mask, terrainNote, index });
-      useAppStore.getState().setStatus("ready", null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [site, profiles, landingUtc, durationHours]);
 
   useEffect(() => {
     if (!playing) return;
@@ -170,24 +155,24 @@ export function App() {
     return () => window.clearInterval(timer);
   }, [playing, durationHours]);
 
-  const ready = status === "ready" && mission !== null && profile !== null;
+  const mission = activeLoad.mission;
+  const ready = activeLoad.status === "ready" && mission !== null && profile !== null;
   const samples = mission?.samples ?? [];
   const times = useMemo(() => samples.map((sample) => Date.parse(sample.t)), [samples]);
   const playheadIndex = nearestIndex(times, Date.parse(playheadUtc));
   const playhead = samples[playheadIndex] ?? null;
 
-  const verdict = useMemo(() => {
+  const summary = useMemo(() => {
     if (!mission || !profile || mission.samples.length === 0) return null;
-    return buildVerdict({
+    const verdict = buildVerdict({
       metrics: mission.metrics,
       profile,
       landing: mission.samples[0],
       commMarginDeg: EARTH_COMM_MARGIN_DEG,
     });
+    return summarize(verdict, mission.metrics, profile, mission.samples[0]);
   }, [mission, profile]);
-
-  const summary = ready && verdict ? summarize(verdict, mission.metrics, profile, mission.samples[0]) : null;
-  const nextLandings = ready ? suggestDates(mission.index, profile).filter((iso) => iso !== landingUtc) : [];
+  const nextLandings = ready && mission ? suggestDates(mission.index, profile).filter((iso) => iso !== landingUtc) : [];
 
   return (
     <div className="app">
@@ -213,8 +198,9 @@ export function App() {
             onCoords={applyCoords}
             onPreset={setSiteId}
             onLanding={setLandingUtc}
+            onCompare={() => setCompareOpen(true)}
           />
-          {ready && summary ? (
+          {ready && summary && mission ? (
             <ResultCard
               state="ready"
               summary={summary}
@@ -226,8 +212,8 @@ export function App() {
             />
           ) : (
             <ResultCard
-              state={status === "error" ? "error" : "loading"}
-              message={errorMessage ?? HORIZONS_LOADING}
+              state={activeLoad.status === "error" ? "error" : "loading"}
+              message={activeLoad.message ?? HORIZONS_LOADING}
             />
           )}
         </div>
@@ -276,6 +262,15 @@ export function App() {
       </main>
 
       {aboutOpen && links ? <AboutDialog credit={links.credit} onClose={() => setAboutOpen(false)} /> : null}
+      {compareOpen ? (
+        <CompareDialog
+          sites={sites}
+          profiles={profiles}
+          current={currentScenario}
+          onClose={() => setCompareOpen(false)}
+          onUse={useScenario}
+        />
+      ) : null}
     </div>
   );
 }

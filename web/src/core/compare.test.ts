@@ -23,6 +23,11 @@ describe("compare", () => {
     expect(sentence).toContain("stays in contact");
   });
 
+  it("says the other site's night is longer when that is the clear difference", () => {
+    const sentence = compare(metrics(0.5, 20), metrics(0.5, 40), "Nobile Rim 1", 336);
+    expect(sentence).toContain("hours longer");
+  });
+
   it("says the sites are about the same when differences are small", () => {
     const sentence = compare(metrics(0.64, 18), metrics(0.62, 17), "Nobile Rim 1", 336);
     expect(sentence).toContain("about the same");

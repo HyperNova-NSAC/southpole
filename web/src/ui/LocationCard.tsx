@@ -22,6 +22,8 @@ type LocationCardProps = {
   onCoords: (latDeg: number, lonDegEast: number) => void;
   onPreset: (siteId: string) => void;
   onLanding: (landingUtc: string) => void;
+  /** Opens the window for comparing this landing with one or two others. */
+  onCompare?: () => void;
 };
 
 /** "2027-03-03T00:00:00Z" → "2027-03-03T00:00" for a datetime-local input. */
@@ -56,6 +58,7 @@ export function LocationCard({
   onCoords,
   onPreset,
   onLanding,
+  onCompare,
 }: LocationCardProps) {
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
@@ -175,6 +178,11 @@ export function LocationCard({
             ? "Terrain is computed live from the LOLA elevation model."
             : "Typed points within 2 km of a known site use that site."}
         </span>
+        {onCompare ? (
+          <button type="button" className="compare-open" onClick={onCompare}>
+            Compare against
+          </button>
+        ) : null}
       </div>
     </form>
   );

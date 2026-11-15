@@ -21,5 +21,11 @@ export function compare(
   if (nightShorterHours > SAME_DIFFERENCE_HOURS) {
     return `${bName}'s longest night is ${Math.round(nightShorterHours)} hours shorter.`;
   }
+  if (contactDiffDays < -SAME_DIFFERENCE_DAYS) {
+    return `${bName} stays in contact ${Math.round(-contactDiffDays)} days less.`;
+  }
+  if (nightShorterHours < -SAME_DIFFERENCE_HOURS) {
+    return `${bName}'s longest night is ${Math.round(-nightShorterHours)} hours longer.`;
+  }
   return `${bName} is about the same for this landing.`;
 }

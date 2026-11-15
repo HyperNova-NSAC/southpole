@@ -26,7 +26,7 @@ export function AboutDialog({ credit, onClose }: AboutDialogProps) {
             <li key={limit}>{limit}</li>
           ))}
         </ul>
-        <button type="button" onClick={onClose}>
+        <button type="button" className="dialog-close" onClick={onClose}>
           Close
         </button>
       </div>
