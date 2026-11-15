@@ -1,5 +1,3 @@
-import csaFile from "../../../content/csa.json";
-
 const LIMITS = [
   "Sun and Earth positions come from JPL Horizons and do not include terrain.",
   "The skyline uses the LOLA south-polar elevation model. It is coarse enough for a decision and is not a survey. Local boulders, lander tilt, and a real power or radio link budget are outside this tool.",
@@ -12,7 +10,6 @@ type AboutDialogProps = {
 };
 
 export function AboutDialog({ credit, onClose }: AboutDialogProps) {
-  const page = csaFile.pages[0];
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div
@@ -29,11 +26,6 @@ export function AboutDialog({ credit, onClose }: AboutDialogProps) {
             <li key={limit}>{limit}</li>
           ))}
         </ul>
-        {page ? (
-          <p>
-            Canadian mission context: <a href={page.url}>{page.title}</a>.
-          </p>
-        ) : null}
         <button type="button" onClick={onClose}>
           Close
         </button>

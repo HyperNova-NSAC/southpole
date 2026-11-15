@@ -6,7 +6,7 @@ export const siteSchema = z.object({
   latDeg: z.number(),
   lonDegEast: z.number(),
   heightM: z.number(),
-  category: z.enum(["apollo", "international", "clps", "artemis", "polar", "csa"]),
+  category: z.enum(["apollo", "international", "clps", "artemis", "polar"]),
   agency: z.string(),
   notes: z.string(),
   sourceUrl: z.string(),

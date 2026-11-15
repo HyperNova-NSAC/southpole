@@ -3,8 +3,7 @@ export type SiteCategory =
   | "international"
   | "clps"
   | "artemis"
-  | "polar"
-  | "csa";
+  | "polar";
 
 export type Site = {
   id: string;

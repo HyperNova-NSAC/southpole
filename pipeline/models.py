@@ -15,7 +15,7 @@ class Site(_Camel):
     lat_deg: float = Field(alias="latDeg")
     lon_deg_east: float = Field(alias="lonDegEast")
     height_m: float = Field(alias="heightM")
-    category: Literal["apollo", "international", "clps", "artemis", "polar", "csa"]
+    category: Literal["apollo", "international", "clps", "artemis", "polar"]
     agency: str
     notes: str
     source_url: str = Field(alias="sourceUrl")
